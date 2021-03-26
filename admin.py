@@ -3,7 +3,7 @@ from django.urls import reverse
 from django.utils.html import format_html
 
 from .models import Menu, MenuItem, Voice
-from .views import get_query_dict
+from .views import call_reverse, get_query_dict
 
 
 def link_to_object(member, model=None):
@@ -23,8 +23,12 @@ def link_to_object(member, model=None):
 
 
 class MenuAdmin(admin.ModelAdmin):
-    list_display = ('enabled', 'name', link_to_object('voice'), 'menu_items')
+    list_display = ('enabled', 'name', 'webhook', link_to_object('voice'), 'menu_items')
     list_display_links = list_display
+
+    def webhook(self, obj):
+        link = call_reverse(obj.name, "call-menu")
+        return format_html('<a href="{}">{}</a>', link, "link")
 
     def menu_items(self, obj):
         items = obj.menu_item_set.all()
