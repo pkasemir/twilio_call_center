@@ -40,7 +40,7 @@ def call_menu(request):
 
     # start twilio menu response
     with response.gather(
-        num_digits=1, action=reverse("whitehorse:call-action"), method="POST",
+        num_digits=1, action=reverse("twilio_call_center:call-action"), method="POST",
         timeout=10
     ) as g:
         last_digit = -1
@@ -100,10 +100,10 @@ def call_action(request):
     if action_phone is None:
         if action_text is not None:
             response.pause(1)
-        response.redirect(reverse("whitehorse:call-menu"))
+        response.redirect(reverse("twilio_call_center:call-menu"))
     else:
         response.dial(action_phone)
-        response.redirect(reverse("whitehorse:call-end"))
+        response.redirect(reverse("twilio_call_center:call-end"))
     return response
 
 
