@@ -19,7 +19,7 @@ except Exception as e:
 
 from twilio.twiml.voice_response import VoiceResponse
 
-from ..models import MenuItem, twilio_default_transfer
+from .models import MenuItem, twilio_default_transfer
 
 
 def twilio_say(response, message, voice='woman', **kwargs):
