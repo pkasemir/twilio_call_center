@@ -1,3 +1,4 @@
+from django import forms
 from django.contrib import admin
 from django.urls import reverse
 from django.utils.html import format_html
@@ -53,7 +54,18 @@ class MenuItemInfoFilter(admin.SimpleListFilter):
         return queryset
 
 
+class MenuItemAdminForm(forms.ModelForm):
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data['action_submenu'] is not None and \
+                cleaned_data['action_url'] is not None:
+            error = "Must choose only one of 'Action submenu' or 'Action url'"
+            self.add_error('action_submenu', error)
+            self.add_error('action_url', error)
+
+
 class MenuItemAdmin(admin.ModelAdmin):
+    form = MenuItemAdminForm
     ordering = ['menu', 'menu_digit']
     list_filter = ['enabled', 'menu', MenuItemInfoFilter]
     search_fields = ['menu__name', 'menu_text', 'action_text', 'action_url']
