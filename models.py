@@ -5,7 +5,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 twilio_default_transfer = 'Transferring, please wait.'
 
 
-class TwilioEntry(models.Model):
+class MenuItem(models.Model):
     enabled = models.BooleanField(default=True)
     menu_digit = models.IntegerField(
         help_text='The key press to access during twilio call.',

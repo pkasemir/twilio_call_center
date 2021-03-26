@@ -19,7 +19,7 @@ except Exception as e:
 
 from twilio.twiml.voice_response import VoiceResponse
 
-from ..models import TwilioEntry, twilio_default_transfer
+from ..models import MenuItem, twilio_default_transfer
 
 
 def twilio_say(response, message, voice='woman', **kwargs):
@@ -45,7 +45,7 @@ def call_menu(request):
     ) as g:
         last_digit = -1
         menu_text = "Thank you for calling White Horse Health and Wellness!"
-        entries = TwilioEntry.objects.filter(enabled=True).order_by('menu_digit')
+        entries = MenuItem.objects.filter(enabled=True).order_by('menu_digit')
         for entry in entries:
             # skip empty entries
             if not entry.menu_text and not entry.action_text \
@@ -74,7 +74,7 @@ def call_action(request):
     query_dict = get_query_dict(request)
     digit = query_dict['Digits']
 
-    entries = TwilioEntry.objects.filter(enabled=True, menu_digit=digit) \
+    entries = MenuItem.objects.filter(enabled=True, menu_digit=digit) \
         .order_by('menu_digit')
     for entry in entries:
         # skip empty entries
