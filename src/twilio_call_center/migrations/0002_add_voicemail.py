@@ -75,4 +75,8 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(blank=True, help_text='If specified, will transfer to this number or mailbox', null=True, on_delete=django.db.models.deletion.SET_NULL, to='twilio_call_center.mailboxnumber'),
         ),
         migrations.RunPython(phone_to_mailbox, mailbox_to_phone),
+        migrations.RemoveField(
+            model_name='menuitem',
+            name='action_phone',
+        ),
     ]

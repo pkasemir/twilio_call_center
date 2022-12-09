@@ -83,7 +83,7 @@ def call_menu(request, name):
         for item in items:
             # skip empty items
             if not item.menu_text and not item.action_text \
-                    and not item.action_phone:
+                    and not item.action_mailbox:
                 continue
             if last_digit >= item.menu_digit:
                 continue

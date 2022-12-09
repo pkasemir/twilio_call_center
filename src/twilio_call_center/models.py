@@ -80,9 +80,6 @@ class MenuItem(models.Model):
         'mailbox phone is specified and this is blank, will use ' +
         '"' + twilio_default_transfer + '".',
         max_length=400, blank=True, null=True)
-    action_phone = models.CharField(
-        help_text='If specified, will transfer to this number when selected by twilio menu.',
-        max_length=15, blank=True, null=True)
     action_mailbox = models.ForeignKey(
             MailboxNumber, on_delete=models.SET_NULL,
             help_text='If specified, will transfer to this number or mailbox',

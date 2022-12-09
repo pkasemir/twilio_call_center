@@ -106,7 +106,7 @@ class MenuItemInfoFilter(admin.SimpleListFilter):
 
     def lookups(self, request, model_admin):
         return [
-                ["phone", "phone"],
+                ["mailbox", "mailbox"],
                 ["text", "text"],
                 ["submenu", "submenu"],
                 ["url", "url"],
@@ -135,15 +135,16 @@ class MenuItemAdmin(admin.ModelAdmin):
         query_dict = get_query_dict(request)
         info = query_dict.get('info', None)
         common_info = ['enabled', link_to_object('menu'), 'menu_digit', 'menu_text']
-        if info == 'phone':
-            return common_info + ['action_phone']
+        if info == 'mailbox':
+            return common_info + [link_to_object('action_mailbox', 'mailboxnumber')]
         if info == 'text':
             return common_info + ['action_text']
         if info == 'submenu':
             return common_info + [link_to_object('action_submenu', 'menu')]
         if info == 'url':
             return common_info + ['action_url']
-        return common_info + ['action_phone', 'action_text', 'action_url',
+        return common_info + [link_to_object('action_mailbox', 'mailboxnumber'),
+                'action_text', 'action_url',
                 link_to_object('action_submenu', 'menu')]
 
     def get_list_display_links(self, request, list_display):
