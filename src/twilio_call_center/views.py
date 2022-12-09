@@ -1,5 +1,6 @@
 from django.http import Http404, HttpResponse
 from django.urls import reverse
+from django.utils import timezone
 
 try:
     from django_twilio.client import twilio_client
@@ -19,7 +20,7 @@ except Exception as e:
 
 from twilio.twiml.voice_response import VoiceResponse
 
-from .models import Menu, MenuItem, twilio_default_transfer, \
+from .models import Menu, MenuItem, Voicemail, twilio_default_transfer, \
     twilio_default_voice
 
 
@@ -42,6 +43,10 @@ def get_query_dict(request):
 def call_reverse(name, page):
     return reverse("twilio_call_center:" + page, kwargs={"name":name})
 
+
+def voicemail_reverse(name, digit):
+    return reverse("twilio_call_center:voicemail", kwargs={"name":name,
+                                                           "digit":digit})
 
 def get_menu(name):
     menu = Menu.objects.filter(enabled=True, name=name)
@@ -100,6 +105,7 @@ def call_action(request, name):
     items = get_menu_items(menu)
     action_text = None
     action_phone = None
+    action_voicemail = None
     action_url = None
     next_menu = name
     next_page = None
@@ -113,10 +119,18 @@ def call_action(request, name):
 
         if item.action_text:
             action_text = item.action_text
-        if item.action_phone:
-            action_phone = item.action_phone
-            if action_text is None:
-                action_text = twilio_default_transfer
+        if item.action_mailbox:
+            mailbox = item.action_mailbox
+            if mailbox.should_send_voicemail():
+                action_text = ''
+                if mailbox.number_currently_unavailable():
+                    action_text = "This connection is currently not available."
+                action_text += " Please leave a message after the beep."
+                action_voicemail=voicemail_reverse(name, digit)
+            else:
+                action_phone = mailbox.phone
+                if action_phone is not None and action_text is None:
+                    action_text = twilio_default_transfer
         if item.action_url:
             action_url = item.action_url
         elif item.action_submenu:
@@ -132,10 +146,16 @@ def call_action(request, name):
     else:
         if next_page is None:
             next_page = "call-end"
-        response.dial(action_phone)
-    if action_url is None:
-        action_url = call_reverse(next_menu, next_page)
-    response.redirect(action_url)
+
+    if action_voicemail is not None:
+        response.record(action=action_voicemail,
+                        transcribeCallback=action_voicemail)
+    else:
+        if action_phone is not None:
+            response.dial(action_phone)
+        if action_url is None:
+            action_url = call_reverse(next_menu, next_page)
+        response.redirect(action_url)
     return response
 
 
@@ -144,5 +164,35 @@ def call_end(request, name):
     response = VoiceResponse()
     menu = get_menu(name)
     twilio_say(menu, response, 'Goodbye.')
+    response.hangup()
+    return response
+
+
+@twilio_view
+def voicemail(request, name, digit):
+    query_dict = get_query_dict(request)
+    transcription = query_dict.get('TranscriptionText', None)
+    menu = get_menu(name)
+    items = get_menu_items(menu).filter(menu_digit=digit)
+
+    defaults=dict(call_sid=query_dict['CallSid'],
+                  from_phone=query_dict['From'],
+                  to_phone=query_dict['To'],
+                  url=query_dict['RecordingUrl'],
+                  status=query_dict['CallStatus'],
+                  last_activity=timezone.now())
+    if transcription is not None:
+        defaults['transcription'] = transcription
+    if len(items) > 0:
+        menu_item = items.first()
+        defaults['menu_item'] = menu_item
+        defaults['mailbox'] = menu_item.action_mailbox
+
+    Voicemail.objects.update_or_create(
+            sid=query_dict['RecordingSid'],
+            defaults=defaults)
+
+    response = VoiceResponse()
+    twilio_say(menu, response, 'Thanks for the voicemail. Goodbye.')
     response.hangup()
     return response

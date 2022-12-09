@@ -3,7 +3,7 @@ from django.contrib import admin
 from django.urls import reverse
 from django.utils.html import format_html
 
-from .models import Menu, MenuItem, Voice
+from .models import Menu, MenuItem, Voice, Voicemail, MailboxNumber
 from .views import call_reverse, get_query_dict
 
 
@@ -21,6 +21,68 @@ def link_to_object(member, model=None):
         return '-'
     _link_to_object.__name__ = member
     return _link_to_object
+
+
+def clean_mutually_exclusive(form, cleaned_data, fields, error):
+    mutual_errors = []
+
+    for field in fields:
+        if cleaned_data[field] is not None:
+            mutual_errors.append(field)
+
+    if len(mutual_errors) > 1:
+        for field in mutual_errors:
+            form.add_error(field, error)
+
+
+class MailboxNumberAdmin(admin.ModelAdmin):
+    list_display = ['name', 'phone', 'available_start', 'available_stop',
+                    'always_send_voicemail']
+    search_fields = list_display
+    list_display_links = list_display
+
+    def clean(self):
+        cleaned_data = super().clean()
+        clean_mutually_exclusive(
+                self, cleaned_data,
+                ['available_start', 'available_stop'],
+                'Must specify either both or neither available times')
+
+
+class VoicemailAdmin(admin.ModelAdmin):
+    list_display = [link_to_object('menu_item', 'menuitem'),
+                    link_to_object('mailbox', 'mailboxnumber'),
+                    'from_phone', 'transcription', 'play_voicemail']
+    search_fields = ['from_phone', 'transcription']
+    list_display_links = search_fields
+    list_filter = ['mailbox']
+
+    def get_readonly_fields(self, request, obj=None):
+        fields = [f.name for f in Voicemail._meta.fields]
+        return ['_url' if f == 'url' else f
+                for f in fields
+                if f not in ['id', 'transcription']]
+
+    def get_fields(self, request, obj):
+        fields = super().get_fields(request, obj)
+        return [f for f in fields if f != 'url']
+
+    def _url(self, obj):
+        return format_html(
+'''
+<a href="{0}.mp3">MP3 Link</a> ---
+<a href="{0}">WAV Link</a><br>
+{1}
+'''.format(obj.url, self.play_voicemail(obj)))
+
+    def play_voicemail(self, obj):
+        return format_html(
+'''
+<audio controls>
+  <source src="{0}.mp3" type="audio/mpeg" />
+  <source src="{0}" type="audio/wav" />
+</audio>
+'''.format(obj.url))
 
 
 class MenuAdmin(admin.ModelAdmin):
@@ -57,11 +119,10 @@ class MenuItemInfoFilter(admin.SimpleListFilter):
 class MenuItemAdminForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
-        if cleaned_data['action_submenu'] is not None and \
-                cleaned_data['action_url'] is not None:
-            error = "Must choose only one of 'Action submenu' or 'Action url'"
-            self.add_error('action_submenu', error)
-            self.add_error('action_url', error)
+        clean_mutually_exclusive(
+                self, cleaned_data,
+                ['action_mailbox', 'action_submenu', 'action_url'],
+                'Must specify only one action (mailbox, submenu, url)')
 
 
 class MenuItemAdmin(admin.ModelAdmin):
@@ -90,5 +151,7 @@ class MenuItemAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Voice)
+admin.site.register(MailboxNumber, MailboxNumberAdmin)
+admin.site.register(Voicemail, VoicemailAdmin)
 admin.site.register(Menu, MenuAdmin)
 admin.site.register(MenuItem, MenuItemAdmin)
