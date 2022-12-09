@@ -4,6 +4,31 @@ from django.db import migrations, models
 import django.db.models.deletion
 
 
+def phone_to_mailbox(apps, schema_editor):
+    MailboxNumber = apps.get_model("twilio_call_center", "MailboxNumber")
+    MenuItem = apps.get_model("twilio_call_center", "MenuItem")
+    db_alias = schema_editor.connection.alias
+    for item in MenuItem.objects.using(db_alias).all():
+        if item.action_phone is not None:
+            mailbox, _ = MailboxNumber.objects.using(db_alias).get_or_create(
+                    phone=item.action_phone,
+                    defaults={'name': 'NA'})
+            item.action_mailbox = mailbox
+            item.save()
+
+
+def mailbox_to_phone(apps, schema_editor):
+    MailboxNumber = apps.get_model("twilio_call_center", "MailboxNumber")
+    MenuItem = apps.get_model("twilio_call_center", "MenuItem")
+    db_alias = schema_editor.connection.alias
+    for item in MenuItem.objects.using(db_alias).all():
+        if item.action_mailbox is not None:
+            phone = item.action_mailbox.phone
+            if phone is not None:
+                item.action_phone = phone
+                item.save()
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -49,4 +74,5 @@ class Migration(migrations.Migration):
             name='action_mailbox',
             field=models.ForeignKey(blank=True, help_text='If specified, will transfer to this number or mailbox', null=True, on_delete=django.db.models.deletion.SET_NULL, to='twilio_call_center.mailboxnumber'),
         ),
+        migrations.RunPython(phone_to_mailbox, mailbox_to_phone),
     ]
