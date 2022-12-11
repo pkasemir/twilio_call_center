@@ -2,6 +2,7 @@
 
 from django.db import migrations, models
 import django.db.models.deletion
+import twilio_call_center.models
 
 
 def phone_to_mailbox(apps, schema_editor):
@@ -42,7 +43,7 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('name', models.CharField(max_length=40)),
                 ('phone', models.CharField(blank=True, max_length=20, null=True)),
-                ('email_list', models.TextField(blank=True, null=True)),
+                ('email_list', models.TextField(blank=True, null=True, validators=[twilio_call_center.models.validate_email_list])),
                 ('available_start', models.TimeField(blank=True, null=True)),
                 ('available_stop', models.TimeField(blank=True, null=True)),
                 ('always_send_voicemail', models.BooleanField(default=False)),
@@ -64,6 +65,7 @@ class Migration(migrations.Migration):
                 ('transcription', models.TextField(blank=True, help_text='A transcription of the recorded message', null=True)),
                 ('url', models.CharField(help_text='The url to the recording', max_length=256)),
                 ('status', models.CharField(max_length=32)),
+                ('transcription_status', models.CharField(blank=True, max_length=32, null=True)),
                 ('last_activity', models.DateTimeField()),
                 ('mailbox', models.ForeignKey(blank=True, help_text='The specific mailbox the message was sent to', null=True, on_delete=django.db.models.deletion.SET_NULL, to='twilio_call_center.mailboxnumber')),
                 ('menu_item', models.ForeignKey(blank=True, help_text='The specific menu item used to send this message', null=True, on_delete=django.db.models.deletion.SET_NULL, to='twilio_call_center.menuitem')),

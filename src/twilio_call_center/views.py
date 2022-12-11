@@ -1,6 +1,11 @@
+from apscheduler.jobstores.base import JobLookupError
+from datetime import timedelta
+from django.conf import settings
+from django.core.mail import send_mail
 from django.http import Http404, HttpResponse
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.html import strip_tags
 
 try:
     from django_twilio.client import twilio_client
@@ -20,6 +25,7 @@ except Exception as e:
 
 from twilio.twiml.voice_response import VoiceResponse
 
+from .apps import scheduler
 from .models import Menu, MenuItem, Voicemail, twilio_default_transfer, \
     twilio_default_voice
 
@@ -168,10 +174,51 @@ def call_end(request, name):
     return response
 
 
+def voicemail_notification_job(recording_sid):
+    voicemail = Voicemail.objects.get(sid=recording_sid)
+    send_voicemail_notifications(voicemail)
+
+
+def send_voicemail_notifications(voicemail):
+    mailbox = voicemail.mailbox
+    if mailbox is None:
+        return
+    email_list = mailbox.get_email_list()
+    if email_list is None:
+        return
+
+    html = '''Hello,<br>
+<br>
+Call center option [{menu_item}] mailbox [{mailbox}] received voicemail from {from_phone}.<br>
+<br>
+Recording is at {url}'''.format(menu_item=voicemail.menu_item,
+                                mailbox=mailbox,
+                                from_phone=voicemail.from_phone,
+                                url=voicemail.url)
+
+    if voicemail.transcription_status is not None:
+        html += '''<br>
+<br>
+Transcription {}'''.format(voicemail.transcription_status)
+        if voicemail.transcription_status == 'completed':
+            html += ''':<br>
+'''
+            html += voicemail.transcription
+
+    send_mail('Received {} voicemail from {}'.format(voicemail.menu_item,
+                                                     voicemail.from_phone),
+              strip_tags(html),
+              settings.TWILIO_CALL_CENTER_VOICEMAIL_EMAIL,
+              email_list,
+              html_message=html)
+
+
 @twilio_view
 def voicemail(request, name, digit):
     query_dict = get_query_dict(request)
+    recording_sid = query_dict['RecordingSid']
     transcription = query_dict.get('TranscriptionText', None)
+    transcription_status = query_dict.get('TranscriptionStatus', None)
     menu = get_menu(name)
     items = get_menu_items(menu).filter(menu_digit=digit)
 
@@ -183,14 +230,31 @@ def voicemail(request, name, digit):
                   last_activity=timezone.now())
     if transcription is not None:
         defaults['transcription'] = transcription
+    if transcription_status is not None:
+        defaults['transcription_status'] = transcription_status
     if len(items) > 0:
         menu_item = items.first()
         defaults['menu_item'] = menu_item
         defaults['mailbox'] = menu_item.action_mailbox
 
-    Voicemail.objects.update_or_create(
-            sid=query_dict['RecordingSid'],
+    voicemail, _ = Voicemail.objects.update_or_create(
+            sid=recording_sid,
             defaults=defaults)
+
+    # We need settings.TWILIO_CALL_CENTER_VOICEMAIL_EMAIL, so make sure it
+    # exists, else raise an exception which will email admins
+    _ = settings.TWILIO_CALL_CENTER_VOICEMAIL_EMAIL
+    job_id = "transcript-" + recording_sid
+    if transcription_status is None:
+        scheduler.add_job(voicemail_notification_job, 'date',
+                          run_date=timezone.now() + timedelta(minutes=5),
+                          args=[recording_sid], id=job_id)
+    else:
+        try:
+            scheduler.remove_job(job_id)
+        except JobLookupError:
+            pass
+        send_voicemail_notifications(voicemail)
 
     response = VoiceResponse()
     twilio_say(menu, response, 'Thanks for the voicemail. Goodbye.')

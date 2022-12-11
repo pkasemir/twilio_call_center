@@ -1,11 +1,24 @@
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator, \
-    validate_slug
+    validate_slug, EmailValidator
 from django.utils import timezone
 
 
 twilio_default_transfer = 'Transferring, please wait.'
 twilio_default_voice = 'woman'
+
+
+def split_email_list(value):
+    return map(str.strip, value.split(','))
+
+
+def validate_email_list(value):
+    if value is None:
+        return
+    for i, email in enumerate(split_email_list(value)):
+        validate = EmailValidator(
+                message='Enter a valid email for address ' + str(i))
+        validate(email)
 
 
 class Voice(models.Model):
@@ -38,13 +51,23 @@ class Menu(models.Model):
 class MailboxNumber(models.Model):
     name = models.CharField(max_length=40)
     phone = models.CharField(max_length=20, blank=True, null=True)
-    email_list = models.TextField(blank=True, null=True)
+    email_list = models.TextField(blank=True, null=True,
+                                  validators=[validate_email_list])
     available_start = models.TimeField(blank=True, null=True)
     available_stop = models.TimeField(blank=True, null=True)
     always_send_voicemail = models.BooleanField(default=False)
 
+    def get_email_list(self):
+        if self.email_list is None:
+            return None
+        else:
+            return split_email_list(self.email_list)
+
     def __str__(self):
-        return "{}-{}".format(self.name, self.phone)
+        if self.phone is None:
+            return self.name
+        else:
+            return "{}-{}".format(self.name, self.phone)
 
     def should_send_voicemail(self):
         if self.always_send_voicemail:
@@ -116,6 +139,8 @@ class Voicemail(models.Model):
             help_text='The url to the recording',
             max_length=256)
     status = models.CharField(max_length=32)
+    transcription_status = models.CharField(
+            max_length=32, blank=True, null=True)
     last_activity = models.DateTimeField()
 
     def __str__(self):
