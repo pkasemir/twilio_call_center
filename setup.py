@@ -16,6 +16,7 @@ setuptools.setup(
         "Bug Tracker": "https://github.com/pkasemir/twilio_call_center/issues",
     },
     install_requires=[
+        "apscheduler",
         "django",
         "django_twilio",
         "twilio",

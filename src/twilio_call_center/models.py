@@ -1,10 +1,24 @@
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator, \
-    validate_slug
+    validate_slug, EmailValidator
+from django.utils import timezone
 
 
 twilio_default_transfer = 'Transferring, please wait.'
 twilio_default_voice = 'woman'
+
+
+def split_email_list(value):
+    return map(str.strip, value.split(','))
+
+
+def validate_email_list(value):
+    if value is None:
+        return
+    for i, email in enumerate(split_email_list(value)):
+        validate = EmailValidator(
+                message='Enter a valid email for address ' + str(i))
+        validate(email)
 
 
 class Voice(models.Model):
@@ -34,6 +48,42 @@ class Menu(models.Model):
         return self.name
 
 
+class MailboxNumber(models.Model):
+    name = models.CharField(max_length=40)
+    phone = models.CharField(max_length=20, blank=True, null=True)
+    email_list = models.TextField(blank=True, null=True,
+                                  validators=[validate_email_list])
+    available_start = models.TimeField(blank=True, null=True)
+    available_stop = models.TimeField(blank=True, null=True)
+    always_send_voicemail = models.BooleanField(default=False)
+
+    def get_email_list(self):
+        if self.email_list is None:
+            return None
+        else:
+            return split_email_list(self.email_list)
+
+    def __str__(self):
+        if self.phone is None:
+            return self.name
+        else:
+            return "{}-{}".format(self.name, self.phone)
+
+    def should_send_voicemail(self):
+        if self.always_send_voicemail:
+            return True
+        if self.phone is None:
+            return True
+        return self.number_currently_unavailable()
+
+    def number_currently_unavailable(self):
+        # if no start/stop time, then always available
+        if self.available_start is None:
+            return False
+        now = timezone.localtime().time()
+        return now < self.available_start or now > self.available_stop
+
+
 class MenuItem(models.Model):
     enabled = models.BooleanField(default=True)
     menu = models.ForeignKey(Menu, on_delete=models.SET_NULL,
@@ -50,12 +100,13 @@ class MenuItem(models.Model):
         max_length=200, blank=True, null=True)
     action_text = models.CharField(
         help_text='The text to say when selected by twilio menu. If action ' +
-        'phone is specified and this is blank, will use ' +
+        'mailbox phone is specified and this is blank, will use ' +
         '"' + twilio_default_transfer + '".',
         max_length=400, blank=True, null=True)
-    action_phone = models.CharField(
-        help_text='If specified, will transfer to this number when selected by twilio menu.',
-        max_length=15, blank=True, null=True)
+    action_mailbox = models.ForeignKey(
+            MailboxNumber, on_delete=models.SET_NULL,
+            help_text='If specified, will transfer to this number or mailbox',
+            blank=True, null=True)
     action_submenu = models.ForeignKey(Menu, on_delete=models.SET_NULL,
         help_text='If specified, will send twilio to this submenu.',
         related_name='submenu_item_set',
@@ -63,3 +114,34 @@ class MenuItem(models.Model):
     action_url = models.CharField(
         help_text='If specified, will send twilio to this url.',
         max_length=400, blank=True, null=True)
+
+    def __str__(self):
+        return "{}-{}".format(self.menu, self.menu_digit)
+
+
+class Voicemail(models.Model):
+    sid = models.CharField(max_length=40, unique=True)
+    call_sid = models.CharField(max_length=40, unique=True)
+    menu_item = models.ForeignKey(
+            MenuItem, on_delete=models.SET_NULL,
+            help_text='The specific menu item used to send this message',
+            blank=True, null=True)
+    mailbox = models.ForeignKey(
+            MailboxNumber, on_delete=models.SET_NULL,
+            help_text='The specific mailbox the message was sent to',
+            blank=True, null=True)
+    from_phone = models.CharField(max_length=20, blank=False, null=False)
+    to_phone = models.CharField(max_length=20, blank=False, null=False)
+    transcription = models.TextField(
+            help_text='A transcription of the recorded message',
+            blank=True, null=True)
+    url = models.CharField(
+            help_text='The url to the recording',
+            max_length=256)
+    status = models.CharField(max_length=32)
+    transcription_status = models.CharField(
+            max_length=32, blank=True, null=True)
+    last_activity = models.DateTimeField()
+
+    def __str__(self):
+        return self.sid
