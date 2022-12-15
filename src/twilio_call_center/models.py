@@ -50,11 +50,24 @@ class Menu(models.Model):
 
 class MailboxNumber(models.Model):
     name = models.CharField(max_length=40)
-    phone = models.CharField(max_length=20, blank=True, null=True)
-    email_list = models.TextField(blank=True, null=True,
-                                  validators=[validate_email_list])
-    available_start = models.TimeField(blank=True, null=True)
-    available_stop = models.TimeField(blank=True, null=True)
+    phone = models.CharField(
+            max_length=20,
+            help_text='Phone number to connect to. If left blank, always ' +
+                'send to voicemail.',
+            blank=True, null=True)
+    email_list = models.TextField(
+            help_text='A comma separated list of emails which receive ' +
+                'voicemail notifications.',
+            blank=True, null=True,
+            validators=[validate_email_list])
+    available_start = models.TimeField(
+            help_text='If time is before this, record a voicemail. ' +
+                'If this is blank, always send to the phone number',
+            blank=True, null=True)
+    available_stop = models.TimeField(
+            help_text='If time is after this, record a voicemail. ' +
+                'If this is blank, always send to the phone number',
+            blank=True, null=True)
     always_send_voicemail = models.BooleanField(default=False)
 
     def get_email_list(self):
