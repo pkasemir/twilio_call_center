@@ -8,14 +8,14 @@ twilio_default_transfer = 'Transferring, please wait.'
 twilio_default_voice = 'woman'
 
 
-def split_email_list(value):
+def split_csv_list(value):
     return map(str.strip, value.split(','))
 
 
 def validate_email_list(value):
     if value is None:
         return
-    for i, email in enumerate(split_email_list(value)):
+    for i, email in enumerate(split_csv_list(value)):
         validate = EmailValidator(
                 message='Enter a valid email for address ' + str(i))
         validate(email)
@@ -74,7 +74,7 @@ class MailboxNumber(models.Model):
         if self.email_list is None:
             return None
         else:
-            return split_email_list(self.email_list)
+            return split_csv_list(self.email_list)
 
     def __str__(self):
         if self.phone is None:
