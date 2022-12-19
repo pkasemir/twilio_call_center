@@ -1,6 +1,6 @@
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator, \
-    validate_slug, EmailValidator
+    validate_slug, EmailValidator, RegexValidator
 from django.utils import timezone
 
 
@@ -17,8 +17,18 @@ def validate_email_list(value):
         return
     for i, email in enumerate(split_csv_list(value)):
         validate = EmailValidator(
-                message='Enter a valid email for address ' + str(i))
+                message='Enter a valid email (for index ' + str(i) + ')')
         validate(email)
+
+
+def validate_pin_digits_list(value):
+    if value is None:
+        return
+    for i, digits in enumerate(split_csv_list(value)):
+        validate = RegexValidator("^[0-9]{3,10}$",
+                message='Enter a valid pin, 3-10 digits (for index ' +
+                        str(i) + ')')
+        validate(digits)
 
 
 class Voice(models.Model):
@@ -111,6 +121,15 @@ class MenuItem(models.Model):
                 'Will be prefixed with "Press N ". ' +
                 'If left blank, it will be a hidden menu.',
             max_length=200, blank=True, null=True)
+    pin_digits_list = models.CharField(
+            help_text='If specified, caller will have to enter one of the pins ' +
+                'in this comma separated list before any actions are taken.',
+            max_length=200, blank=True, null=True,
+            validators = [validate_pin_digits_list])
+    pin_text = models.CharField(
+            help_text='If specified, say this when asking for a pin. Does ' +
+                'nothing when Pin digits list is not specified.',
+            max_length=200, blank=True, null=True)
     action_text = models.CharField(
             help_text='The text to say when selected by twilio menu. If action ' +
                 'mailbox phone is specified and this is blank, will use ' +
@@ -127,6 +146,12 @@ class MenuItem(models.Model):
     action_url = models.CharField(
             help_text='If specified, will send twilio to this url.',
             max_length=400, blank=True, null=True)
+
+    def get_pin_digits_list(self):
+        if self.pin_digits_list is None:
+            return None
+        else:
+            return split_csv_list(self.pin_digits_list)
 
     def __str__(self):
         return "{}-{}".format(self.menu, self.menu_digit)
