@@ -89,7 +89,7 @@ def call_menu(request, name):
         last_digit = -1
         menu_text = ""
         if menu.greeting_text is not None:
-            menu_text += menu.greeting_text
+            menu_text += menu.greeting_text + '.'
         for item in items:
             # skip empty items
             if not item.menu_text and not item.action_text \
@@ -175,7 +175,7 @@ def call_action(request, name, digit=None):
             next_page = "call-menu"
 
     if action_text is not None:
-        twilio_say(menu, response, action_text)
+        twilio_say(menu, response, action_text + '.')
     if action_phone is None:
         next_page = "call-menu"
         if action_text is not None:
