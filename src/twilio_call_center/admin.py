@@ -3,6 +3,7 @@ from django.contrib import admin
 from django.urls import reverse
 from django.utils.html import format_html
 
+from .apps import my_app
 from .models import Menu, MenuItem, Voice, Voicemail, MailboxNumber
 from .views import call_reverse, get_query_dict
 
@@ -116,13 +117,26 @@ class MenuItemInfoFilter(admin.SimpleListFilter):
         return queryset
 
 
+def get_action_function_choices():
+    return [('', '---------')] + \
+            [(k, k) for k in sorted(my_app().action_functions.keys())]
+
+
 class MenuItemAdminForm(forms.ModelForm):
+    action_function = forms.ChoiceField(
+            choices=get_action_function_choices,
+            required=False,
+            help_text=MenuItem._meta.get_field('action_function').help_text)
+
     def clean(self):
         cleaned_data = super().clean()
+        if cleaned_data['action_function'] == '':
+            cleaned_data['action_function'] = None
         clean_mutually_exclusive(
                 self, cleaned_data,
-                ['action_mailbox', 'action_submenu', 'action_url'],
-                'Must specify only one action (mailbox, submenu, url)')
+                ['action_mailbox', 'action_submenu', 'action_url',
+                 'action_function'],
+                'Must specify only one action (mailbox, submenu, url, function)')
 
 
 class MenuItemAdmin(admin.ModelAdmin):

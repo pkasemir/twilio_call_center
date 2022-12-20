@@ -25,7 +25,7 @@ except Exception as e:
 
 from twilio.twiml.voice_response import VoiceResponse
 
-from .apps import scheduler
+from .apps import scheduler, my_app
 from .models import Menu, MenuItem, Voicemail, twilio_default_transfer, \
     twilio_default_voice
 
@@ -122,6 +122,7 @@ def call_action(request, name, digit=None):
     action_phone = None
     action_voicemail = None
     action_url = None
+    action_function = None
     next_menu = name
     next_page = None
 
@@ -173,6 +174,15 @@ def call_action(request, name, digit=None):
         elif item.action_submenu:
             next_menu = item.action_submenu.name
             next_page = "call-menu"
+        if item.action_function:
+            action_function = item.action_function
+
+    if action_function is not None:
+        func = my_app().action_functions.get(action_function, None)
+        if func is not None:
+            func_str = func(request=request, response=response)
+            if func_str is not None:
+                action_text = func_str
 
     if action_text is not None:
         twilio_say(menu, response, action_text + '.')

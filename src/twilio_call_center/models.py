@@ -146,6 +146,10 @@ class MenuItem(models.Model):
     action_url = models.CharField(
             help_text='If specified, will send twilio to this url.',
             max_length=400, blank=True, null=True)
+    action_function = models.CharField(
+            help_text='If specified, will call the given function and say ' +
+                'the result.',
+            max_length=100, blank=True, null=True)
 
     def get_pin_digits_list(self):
         if self.pin_digits_list is None:
