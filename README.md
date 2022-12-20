@@ -4,15 +4,17 @@ A django app which allows user to create dynamic call center for use with Twilio
 ## How to install into django webserver
 1. Add `twilio_call_center.apps.TwilioCallCenterConfig` to settings.py `INSTALLED_APPS`
 2. Add a path to gain access to urls.py, for example:
-
-        urlpatterns = [
-            # other paths go here
-            path('call-center/', include('twilio_call_center.urls'),
-                name='twilio_call_center'),
+```python
+    urlpatterns = [
+        # other paths go here
+        path('call-center/', include('twilio_call_center.urls'),
+            name='twilio_call_center'),
+```
 3. Add `TWILIO_CALL_CENTER_VOICEMAIL_EMAIL` to settings.py
-
-        TWILIO_CALL_CENTER_VOICEMAIL_EMAIL=os.environ.get(
-                'TWILIO_CALL_CENTER_VOICEMAIL_EMAIL', 'voicemail@your-domain.com')
+```python
+TWILIO_CALL_CENTER_VOICEMAIL_EMAIL=os.environ.get(
+        'TWILIO_CALL_CENTER_VOICEMAIL_EMAIL', 'voicemail@your-domain.com')
+```
 
 ## Other settings
 ### `TWILIO_CALL_CENTER_ACTION_FUNCTIONS`
