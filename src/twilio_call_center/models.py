@@ -1,6 +1,6 @@
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator, \
-    validate_slug, EmailValidator
+    validate_slug, EmailValidator, RegexValidator
 from django.utils import timezone
 
 
@@ -8,23 +8,33 @@ twilio_default_transfer = 'Transferring, please wait.'
 twilio_default_voice = 'woman'
 
 
-def split_email_list(value):
+def split_csv_list(value):
     return map(str.strip, value.split(','))
 
 
 def validate_email_list(value):
     if value is None:
         return
-    for i, email in enumerate(split_email_list(value)):
+    for i, email in enumerate(split_csv_list(value)):
         validate = EmailValidator(
-                message='Enter a valid email for address ' + str(i))
+                message='Enter a valid email (for index ' + str(i) + ')')
         validate(email)
+
+
+def validate_pin_digits_list(value):
+    if value is None:
+        return
+    for i, digits in enumerate(split_csv_list(value)):
+        validate = RegexValidator("^[0-9]{3,10}$",
+                message='Enter a valid pin, 3-10 digits (for index ' +
+                        str(i) + ')')
+        validate(digits)
 
 
 class Voice(models.Model):
     voice = models.CharField(
-        help_text='Twilio voice (ex: man, woman).',
-        max_length=40)
+            help_text='Twilio voice (ex: man, woman).',
+            max_length=40)
 
     def __str__(self):
         return self.voice
@@ -33,16 +43,16 @@ class Voice(models.Model):
 class Menu(models.Model):
     enabled = models.BooleanField(default=True)
     name = models.CharField(
-        help_text='The name of the menu, used as the url.',
-        validators=[validate_slug],
-        max_length=40, unique=True)
+            help_text='The name of the menu, used as the url.',
+            validators=[validate_slug],
+            max_length=40, unique=True)
     greeting_text = models.CharField(
-        help_text='The text to say when entering this menu.',
-        max_length=400, blank=True, null=True)
+            help_text='The text to say when entering this menu.',
+            max_length=400, blank=True, null=True)
     voice = models.ForeignKey(Voice, on_delete=models.SET_NULL,
-        help_text='Twilio voice, if unset default to "' +
-            twilio_default_voice + '".',
-        blank=True, null=True)
+            help_text='Twilio voice, if unset default to "' +
+                twilio_default_voice + '".',
+            blank=True, null=True)
 
     def __str__(self):
         return self.name
@@ -50,18 +60,31 @@ class Menu(models.Model):
 
 class MailboxNumber(models.Model):
     name = models.CharField(max_length=40)
-    phone = models.CharField(max_length=20, blank=True, null=True)
-    email_list = models.TextField(blank=True, null=True,
-                                  validators=[validate_email_list])
-    available_start = models.TimeField(blank=True, null=True)
-    available_stop = models.TimeField(blank=True, null=True)
+    phone = models.CharField(
+            max_length=20,
+            help_text='Phone number to connect to. If left blank, always ' +
+                'send to voicemail.',
+            blank=True, null=True)
+    email_list = models.TextField(
+            help_text='A comma separated list of emails which receive ' +
+                'voicemail notifications.',
+            blank=True, null=True,
+            validators=[validate_email_list])
+    available_start = models.TimeField(
+            help_text='If time is before this, record a voicemail. ' +
+                'If this is blank, always send to the phone number',
+            blank=True, null=True)
+    available_stop = models.TimeField(
+            help_text='If time is after this, record a voicemail. ' +
+                'If this is blank, always send to the phone number',
+            blank=True, null=True)
     always_send_voicemail = models.BooleanField(default=False)
 
     def get_email_list(self):
         if self.email_list is None:
             return None
         else:
-            return split_email_list(self.email_list)
+            return split_csv_list(self.email_list)
 
     def __str__(self):
         if self.phone is None:
@@ -87,33 +110,52 @@ class MailboxNumber(models.Model):
 class MenuItem(models.Model):
     enabled = models.BooleanField(default=True)
     menu = models.ForeignKey(Menu, on_delete=models.SET_NULL,
-        help_text='The menu this item is associated with.',
-        related_name='menu_item_set',
-        blank=True, null=True)
+            help_text='The menu this item is associated with.',
+            related_name='menu_item_set',
+            blank=True, null=True)
     menu_digit = models.IntegerField(
-        help_text='The key press to access during twilio call.',
-        validators=[MinValueValidator(0), MaxValueValidator(9)])
+            help_text='The key press to access during twilio call.',
+            validators=[MinValueValidator(0), MaxValueValidator(9)])
     menu_text = models.CharField(
-        help_text='The text to say in the twilio menu. ' +
-        'Will be prefixed with "Press N ". ' +
-        'If left blank, it will be a hidden menu.',
-        max_length=200, blank=True, null=True)
+            help_text='The text to say in the twilio menu. ' +
+                'Will be prefixed with "Press N ". ' +
+                'If left blank, it will be a hidden menu.',
+            max_length=200, blank=True, null=True)
+    pin_digits_list = models.CharField(
+            help_text='If specified, caller will have to enter one of the pins ' +
+                'in this comma separated list before any actions are taken.',
+            max_length=200, blank=True, null=True,
+            validators = [validate_pin_digits_list])
+    pin_text = models.CharField(
+            help_text='If specified, say this when asking for a pin. Does ' +
+                'nothing when Pin digits list is not specified.',
+            max_length=200, blank=True, null=True)
     action_text = models.CharField(
-        help_text='The text to say when selected by twilio menu. If action ' +
-        'mailbox phone is specified and this is blank, will use ' +
-        '"' + twilio_default_transfer + '".',
-        max_length=400, blank=True, null=True)
+            help_text='The text to say when selected by twilio menu. If action ' +
+                'mailbox phone is specified and this is blank, will use ' +
+                '"' + twilio_default_transfer + '".',
+            max_length=400, blank=True, null=True)
     action_mailbox = models.ForeignKey(
             MailboxNumber, on_delete=models.SET_NULL,
             help_text='If specified, will transfer to this number or mailbox',
             blank=True, null=True)
     action_submenu = models.ForeignKey(Menu, on_delete=models.SET_NULL,
-        help_text='If specified, will send twilio to this submenu.',
-        related_name='submenu_item_set',
-        blank=True, null=True)
+            help_text='If specified, will send twilio to this submenu.',
+            related_name='submenu_item_set',
+            blank=True, null=True)
     action_url = models.CharField(
-        help_text='If specified, will send twilio to this url.',
-        max_length=400, blank=True, null=True)
+            help_text='If specified, will send twilio to this url.',
+            max_length=400, blank=True, null=True)
+    action_function = models.CharField(
+            help_text='If specified, will call the given function and say ' +
+                'the result.',
+            max_length=100, blank=True, null=True)
+
+    def get_pin_digits_list(self):
+        if self.pin_digits_list is None:
+            return None
+        else:
+            return split_csv_list(self.pin_digits_list)
 
     def __str__(self):
         return "{}-{}".format(self.menu, self.menu_digit)

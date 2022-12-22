@@ -25,7 +25,7 @@ except Exception as e:
 
 from twilio.twiml.voice_response import VoiceResponse
 
-from .apps import scheduler
+from .apps import scheduler, my_app
 from .models import Menu, MenuItem, Voicemail, twilio_default_transfer, \
     twilio_default_voice
 
@@ -49,6 +49,10 @@ def get_query_dict(request):
 def call_reverse(name, page):
     return reverse("twilio_call_center:" + page, kwargs={"name":name})
 
+
+def pin_reverse(name, digit):
+    return reverse("twilio_call_center:call-pin", kwargs={"name":name,
+                                                          "digit":digit})
 
 def voicemail_reverse(name, digit):
     return reverse("twilio_call_center:voicemail", kwargs={"name":name,
@@ -85,7 +89,7 @@ def call_menu(request, name):
         last_digit = -1
         menu_text = ""
         if menu.greeting_text is not None:
-            menu_text += menu.greeting_text
+            menu_text += menu.greeting_text + '.'
         for item in items:
             # skip empty items
             if not item.menu_text and not item.action_text \
@@ -105,23 +109,51 @@ def call_menu(request, name):
 
 
 @twilio_view
-def call_action(request, name):
+def call_action(request, name, digit=None):
+    ''' Takes both action and pin urls
+        <name>/call-action
+        <name>/call-pin/<digit>
+    '''
     response = VoiceResponse()
     menu = get_menu(name)
     items = get_menu_items(menu)
+    pin = None
     action_text = None
     action_phone = None
     action_voicemail = None
     action_url = None
+    action_function = None
     next_menu = name
     next_page = None
 
     query_dict = get_query_dict(request)
-    digit = query_dict['Digits']
+    if digit is None:
+        digit = query_dict['Digits']
+    else:
+        pin = query_dict['Digits']
 
     digit_items = items.filter(menu_digit=digit)
     if len(digit_items):
         item = digit_items.first()
+
+        pin_digits_list = item.get_pin_digits_list()
+        if pin_digits_list is not None:
+            if pin is None:
+                with response.gather(
+                    finish_on_key='#', action=pin_reverse(name, digit),
+                    method="POST", timeout=10
+                ) as g:
+                    pin_text = "Enter your pin followed by pound."
+                    if item.pin_text:
+                        pin_text = item.pin_text
+                    twilio_say(menu, g, pin_text)
+                return response
+            else:
+                if pin not in pin_digits_list:
+                    twilio_say(menu, response, 'Invalid entry.')
+                    response.pause(1)
+                    response.redirect(call_reverse(name, 'call-menu'))
+                    return response
 
         if item.action_text:
             action_text = item.action_text
@@ -142,9 +174,18 @@ def call_action(request, name):
         elif item.action_submenu:
             next_menu = item.action_submenu.name
             next_page = "call-menu"
+        if item.action_function:
+            action_function = item.action_function
+
+    if action_function is not None:
+        func = my_app().action_functions.get(action_function, None)
+        if func is not None:
+            func_str = func(request=request, response=response)
+            if func_str is not None:
+                action_text = func_str
 
     if action_text is not None:
-        twilio_say(menu, response, action_text)
+        twilio_say(menu, response, action_text + '.')
     if action_phone is None:
         next_page = "call-menu"
         if action_text is not None:
