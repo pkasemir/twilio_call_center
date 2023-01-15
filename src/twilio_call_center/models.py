@@ -1,7 +1,10 @@
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator, \
     validate_slug, EmailValidator, RegexValidator
+from django.forms.widgets import Input
 from django.utils import timezone
+
+from .validators import validate_phone_number, validate_zip_code
 
 
 twilio_default_transfer = 'Transferring, please wait.'
@@ -29,6 +32,23 @@ def validate_pin_digits_list(value):
                 message='Enter a valid pin, 3-10 digits (for index ' +
                         str(i) + ')')
         validate(digits)
+
+
+class TelInput(Input):
+    input_type = 'tel'
+
+
+class PhoneField(models.CharField):
+    default_validators = [validate_phone_number]
+    def __init__(self, **kwargs):
+        defaults = dict(max_length=20, blank=True, null=True)
+        defaults.update(kwargs)
+        super().__init__(**defaults)
+
+    def formfield(self, **kwargs):
+        defaults = dict(widget=TelInput)
+        defaults.update(kwargs)
+        return super().formfield(**defaults)
 
 
 class Voice(models.Model):
@@ -183,6 +203,18 @@ class Voicemail(models.Model):
     status = models.CharField(max_length=32)
     transcription_status = models.CharField(
             max_length=32, blank=True, null=True)
+    last_activity = models.DateTimeField()
+
+    def __str__(self):
+        return self.sid
+
+
+class SmsMessage(models.Model):
+    sid = models.CharField(max_length=40, unique=True)
+    from_phone = PhoneField(blank=False, null=False)
+    to_phone = PhoneField(blank=False, null=False)
+    message = models.TextField()
+    status = models.CharField(max_length=32)
     last_activity = models.DateTimeField()
 
     def __str__(self):

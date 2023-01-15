@@ -165,8 +165,19 @@ class MenuItemAdmin(admin.ModelAdmin):
         return list_display
 
 
+class SmsMessageAdmin(admin.ModelAdmin):
+    list_display = ['sid', 'from_phone', 'to_phone', 'status', 'last_activity',
+                    'message']
+    search_fields = list_display
+    list_display_links = list_display
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
 admin.site.register(Voice)
 admin.site.register(MailboxNumber, MailboxNumberAdmin)
 admin.site.register(Voicemail, VoicemailAdmin)
 admin.site.register(Menu, MenuAdmin)
 admin.site.register(MenuItem, MenuItemAdmin)
+admin.site.register(SmsMessage, SmsMessageAdmin)
