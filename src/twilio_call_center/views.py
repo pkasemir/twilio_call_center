@@ -548,6 +548,10 @@ def send_sms_cb(request):
 
 
 def sms_status(request):
+    if not request.user.has_perm('twilio_call_center.view_smsmessage'):
+        return JsonResponse({'error':
+            'You do not have permissions to view SMS messages'})
+
     query_dict = get_query_dict(request)
     sid = query_dict.get('sid', None)
     if not sid:

@@ -194,6 +194,17 @@ let myTimer = setInterval(function() {
     </script>
   </head>
   <body>
+    {% if not perms.twilio_call_center.add_smsmessage %}
+    <div class="main-block">
+      <div class="alert warning">
+        You do not have permissions to send SMS messages. Ask administrator to
+        give you 'add sms message' permissions.
+      </div>
+      <form>
+        <button onclick="history.back()">Go Back</button>
+      </form>
+    </div>
+    {% else %}
     {% block top-nav %}
     <div class="top-nav">
       <a href="{% url 'admin:index' %}">Django administration</a>
@@ -218,5 +229,6 @@ let myTimer = setInterval(function() {
         <button type="submit" id='submit-button'>Send</button>
       </form>
     </div>
+    {% endif %}
   </body>
 </html>
