@@ -44,6 +44,11 @@ debug purposes.
 TWILIO_CALL_CENTER_DEBUG_SITE="http://93.93.10.10:8000"
 ```
 
+### `TWILIO_CALL_CENTER_DEFAULT_COUNTRY`
+This setting lets you choose which country to attempt parsing phone numbers.
+It defaults to 'US', but consult `pypi` package `phonenumbers` documentation
+for the function `phonenumbers.parse()`
+
 ## How to use the call center
 ### Ensure Twilio credentials are set
 Preferrably as environment variables, set `TWILIO_ACCOUNT_SID` and `TWILIO_AUTH_TOKEN`

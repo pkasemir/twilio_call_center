@@ -19,6 +19,7 @@ setuptools.setup(
         "apscheduler",
         "django",
         "django_twilio",
+        "phonenumbers",
         "twilio",
     ],
     classifiers=[
