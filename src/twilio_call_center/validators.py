@@ -19,20 +19,21 @@ def validate_phone_number(value):
         raise phone_error
 
 
-def validate_email_list(value):
+def validate_list_using(validator, value):
     if value is None:
         return
-    for i, email in enumerate(split_csv_list(value)):
-        validate = EmailValidator(
-                message='Enter a valid email (for index ' + str(i) + ')')
-        validate(email)
+    for i, item in enumerate(split_csv_list(value)):
+        try:
+            validator(item)
+        except ValidationError as e:
+            raise ValidationError("{} (at index {})'".format(e.message, i)) from e
+
+
+def validate_email_list(value):
+    validate_list_using(EmailValidator(), value)
 
 
 def validate_pin_digits_list(value):
-    if value is None:
-        return
-    for i, digits in enumerate(split_csv_list(value)):
-        validate = RegexValidator("^[0-9]{3,10}$",
-                message='Enter a valid pin, 3-10 digits (for index ' +
-                        str(i) + ')')
-        validate(digits)
+    pin_validator = RegexValidator("^[0-9]{3,10}$",
+                                   message='Enter a valid pin, 3-10 digits.')
+    validate_list_using(pin_validator, value)
