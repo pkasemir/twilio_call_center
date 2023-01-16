@@ -115,11 +115,12 @@ function alert_close(btn) {
   setTimeout(function(){ div.style.display = "none"; }, 600);
 }
 {% if last_msg and not has_error %}
-{% load static %}
-<script src="{% static "www/js/jquery-3.3.1.min.js" %}"></script>
-<script>
 function addMessage(level, message) {
-  $("#message-list").append('<li class="' + level + '-card">' + message + '</li>');
+  var message_list = document.getElementById('message-list');
+  message_list.innerHTML +=
+    '<div class="alert ' + level + '">' +
+    '  <span class="alertclose" onclick="alert_close(this);">&times</span>' +
+    message + '</div>';
 }
 
 function getCookie(name) {
@@ -138,12 +139,8 @@ function getCookie(name) {
     return cookieValue;
 }
 
-const csrftoken = getCookie('csrftoken');
-$.ajaxSetup({
-   headers:{
-      'X-CSRFToken': csrftoken
-   }
-});
+const statusHeaders = new Headers();
+statusHeaders.append('X-CSRFToken', getCookie('csrftoken'));
 
 let lastStatus = '';
 let timeLeft = 30;
@@ -152,8 +149,18 @@ let myTimer = setInterval(function() {
   if (finished) {
     return;
   }
-  const query = {'sid': '{{ last_msg }}'};
-  $.post('{% url "www:sms-status" %}', query, function(data) {
+  const query = new FormData();
+  query.append('sid', '{{ last_msg }}');
+  const statusOptions = {
+    method: 'POST',
+    headers: statusHeaders,
+    body: query,
+  };
+  const myRequest = new Request('{% url "twilio_call_center:sms-status" %}',
+    statusOptions);
+  fetch(myRequest).
+    then((response) => response.json()).
+    then((data) => {
     if (data.error) {
       addMessage("error", data.error);
       finished = true;
@@ -183,7 +190,6 @@ let myTimer = setInterval(function() {
   }
 }, 1000);
 
-</script>
 {% endif %}
     </script>
   </head>
@@ -197,11 +203,13 @@ let myTimer = setInterval(function() {
     </div>
     {% endblock %}
     <div class="main-block">
-      {% for message in messages %}
-      <div class="alert {{message.tags}}">
-        <span class="alertclose" onclick="alert_close(this);">&times</span>
-        {{message}}</div>
-      {% endfor %}
+      <div id="message-list">
+        {% for message in messages %}
+        <div class="alert {{message.tags}}">
+          <span class="alertclose" onclick="alert_close(this);">&times</span>
+          {{message}}</div>
+        {% endfor %}
+      </div>
       <form action="" method="post"
         onsubmit="document.getElementById('submit-button').disabled = true; return true">
         <h1>Send an SMS message</h1>

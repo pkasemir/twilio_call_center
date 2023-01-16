@@ -6,6 +6,7 @@ app_name = 'twilio_call_center'
 urlpatterns = [
     path('send-sms', views.SendSmsView.as_view(), name='send-sms'),
     path('send-sms-cb', views.send_sms_cb, name='send-sms-cb'),
+    path('sms-status', views.sms_status, name='sms-status'),
     path('<slug:name>/call-menu', views.call_menu, name='call-menu'),
     path('<slug:name>/call-action', views.call_action, name='call-action'),
     path('<slug:name>/call-pin/<slug:digit>', views.call_action, name='call-pin'),

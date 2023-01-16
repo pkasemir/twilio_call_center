@@ -7,9 +7,10 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import send_mail
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
+from django.utils.formats import localize
 from django.utils.html import strip_tags, escape
 from django.utils.safestring import SafeText
 from django.views.generic.edit import FormView
