@@ -4,7 +4,8 @@ from django.urls import reverse
 from django.utils.html import format_html
 
 from .apps import my_app
-from .models import Menu, MenuItem, Voice, Voicemail, MailboxNumber
+from .models import Menu, MenuItem, Voice, Voicemail, MailboxNumber, \
+        SmsMessage, TwilioNumber
 from .views import call_reverse, get_query_dict
 
 
@@ -181,3 +182,4 @@ admin.site.register(Voicemail, VoicemailAdmin)
 admin.site.register(Menu, MenuAdmin)
 admin.site.register(MenuItem, MenuItemAdmin)
 admin.site.register(SmsMessage, SmsMessageAdmin)
+admin.site.register(TwilioNumber)

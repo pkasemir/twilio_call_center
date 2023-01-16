@@ -4,7 +4,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator, \
 from django.forms.widgets import Input
 from django.utils import timezone
 
-from .validators import validate_phone_number, validate_zip_code
+from .validators import validate_phone_number
 
 
 twilio_default_transfer = 'Transferring, please wait.'
@@ -219,3 +219,12 @@ class SmsMessage(models.Model):
 
     def __str__(self):
         return self.sid
+
+
+class TwilioNumber(models.Model):
+    name = models.CharField(max_length=40, blank=False, null=False,
+                             unique=True)
+    phone = PhoneField(blank=False, null=False, unique=True)
+
+    def __str__(self):
+        return "{} {}".format(self.name, self.phone)

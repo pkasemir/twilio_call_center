@@ -1,11 +1,19 @@
+import logging
+import re
+
 from apscheduler.jobstores.base import JobLookupError
 from datetime import timedelta
 from django.conf import settings
+from django.contrib import messages
+from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import send_mail
 from django.http import Http404, HttpResponse
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
-from django.utils.html import strip_tags
+from django.utils.html import strip_tags, escape
+from django.utils.safestring import SafeText
+from django.views.generic.edit import FormView
+
 
 try:
     from django_twilio.client import twilio_client
@@ -26,8 +34,12 @@ except Exception as e:
 from twilio.twiml.voice_response import VoiceResponse
 
 from .apps import scheduler, my_app
+from .forms import SendSmsForm
 from .models import Menu, MenuItem, Voicemail, twilio_default_transfer, \
-    twilio_default_voice
+    twilio_default_voice, SmsMessage
+
+
+logger = logging.getLogger(__name__)
 
 
 def twilio_callback_site(current_site):
@@ -481,24 +493,15 @@ def update_sms_message(type_str, query_dict):
         return msg
 
 
-def sms_send(current_site, msg, to_number):
+def send_sms(current_site, from_number, to_number, msg):
     callback_site = twilio_callback_site(current_site)
-    facility = Facility.objects.first()
     result = {'id': None, 'sid': None, 'error': None}
-
-    if not facility:
-        result['error'] = 'No facility object. Please create one.'
-        return result
-    from_number = facility.facility_phone
-    if not from_number:
-        result['error'] = 'No facility phone number. Please set it.'
-        return result
 
     kwargs = {
         'body': msg,
         'to': to_number,
         'from_': from_number,
-        'status_callback': callback_site + reverse('www:sms-send-cb'),
+        'status_callback': callback_site + reverse('twilio_call_center:send-sms-cb'),
     }
 
     try:
@@ -533,7 +536,7 @@ def sms_send(current_site, msg, to_number):
 
 
 @twilio_view
-def sms_send_cb(request):
+def send_sms_cb(request):
     query_dict = get_query_dict(request)
     no_status = 'no status'
     update_sms_message("SMS send callback", query_dict)
@@ -564,22 +567,23 @@ def sms_status(request):
     return JsonResponse(response)
 
 
-class SMSCenterView(FormViewWithErrorDisplay):
-    template_name = 'www/Office/SMSCenter.html'
-    form_class = forms.SMSCenterForm
-    success_url = reverse_lazy('www:sms-center')
+class SendSmsView(FormViewWithErrorDisplay):
+    template_name = 'twilio_call_center/send_sms.html'
+    form_class = SendSmsForm
+    success_url = reverse_lazy('twilio_call_center:send-sms')
     last_msg = 'last_msg'
 
     def form_valid(self, form):
         current_site = get_current_site(self.request)
         msg = form.cleaned_data['message']
-        to_number = form.cleaned_data['phone']
-        result = sms_send(current_site, msg, to_number)
+        to_number = form.cleaned_data['to_phone']
+        from_number = form.cleaned_data['from_phone']
+        result = send_sms(current_site, from_number.phone, to_number, msg)
         if result['sid']:
             self.info(result['sid'], extra_tags=self.last_msg)
             sms_link = "SMS message"
             if result['id']:
-                link = reverse("admin:api_smsmessage_change",
+                link = reverse("admin:twilio_call_center_smsmessage_change",
                                args=(result['id'],))
                 sms_link = '<a href="{}">{}</a>'.format(link, sms_link)
             self.info(SafeText(

@@ -1,10 +1,14 @@
 from django import forms
-from django.core.validators import validate_email, MaxLengthValidator
+from django.core.validators import MaxLengthValidator
 
-from .validators import validate_name, validate_phone_number
+from .models import TwilioNumber, TelInput
+from .validators import validate_phone_number
 
-class SMSCenterForm(forms.Form):
+class SendSmsForm(forms.Form):
+    from_phone = forms.ModelChoiceField(queryset=TwilioNumber.objects.all())
+    to_phone = forms.CharField(required=True,
+                               validators=[validate_phone_number],
+                               widget=TelInput())
     message = forms.CharField(required=True, max_length=1600,
                               validators=[MaxLengthValidator(1600)],
                               widget=forms.Textarea(attrs={'rows':5}))
-    phone = forms.CharField(required=True, validators=[validate_phone_number])
