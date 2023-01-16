@@ -114,6 +114,77 @@ function alert_close(btn) {
   div.style.opacity = "0";
   setTimeout(function(){ div.style.display = "none"; }, 600);
 }
+{% if last_msg and not has_error %}
+{% load static %}
+<script src="{% static "www/js/jquery-3.3.1.min.js" %}"></script>
+<script>
+function addMessage(level, message) {
+  $("#message-list").append('<li class="' + level + '-card">' + message + '</li>');
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            // Does this cookie string begin with the name we want?
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+const csrftoken = getCookie('csrftoken');
+$.ajaxSetup({
+   headers:{
+      'X-CSRFToken': csrftoken
+   }
+});
+
+let lastStatus = '';
+let timeLeft = 30;
+let finished = false;
+let myTimer = setInterval(function() {
+  if (finished) {
+    return;
+  }
+  const query = {'sid': '{{ last_msg }}'};
+  $.post('{% url "www:sms-status" %}', query, function(data) {
+    if (data.error) {
+      addMessage("error", data.error);
+      finished = true;
+    } else {
+      if (data.status !== lastStatus) {
+        lastStatus = data.status;
+        let level = "info";
+        switch (data.status) {
+          case "failed":
+            level = "error";
+            finished = true;
+            break;
+          case "undelivered":
+            level = "warning";
+            break;
+          case "delivered":
+            finished = true;
+            break;
+        }
+        addMessage(level, "Message: " + data.status + " " + data.last_activity);
+      }
+    }
+  });
+  timeLeft--;
+  if (timeLeft <= 0 || finished) {
+    clearInterval(myTimer);
+  }
+}, 1000);
+
+</script>
+{% endif %}
     </script>
   </head>
   <body>
