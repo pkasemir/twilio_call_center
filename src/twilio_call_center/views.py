@@ -44,6 +44,7 @@ logger = logging.getLogger(__name__)
 
 
 def twilio_callback_site(current_site):
+    twilio_debug_site = getattr(settings, 'TWILIO_CALL_CENTER_DEBUG_SITE', None)
     if twilio_debug_site:
         return twilio_debug_site
     else:

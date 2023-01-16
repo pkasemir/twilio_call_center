@@ -35,6 +35,15 @@ TWILIO_CALL_CENTER_ACTION_FUNCTIONS = [
     ]
 ```
 
+### `TWILIO_CALL_CENTER_DEBUG_SITE`
+This setting allows you to override the status callback url. Normally the site
+will have the HTTPS protocol, but this will allow you to set HTTP protocol for
+debug purposes.
+```python
+# local_settings.py
+TWILIO_CALL_CENTER_DEBUG_SITE="http://93.93.10.10:8000"
+```
+
 ## How to use the call center
 ### Ensure Twilio credentials are set
 Preferrably as environment variables, set `TWILIO_ACCOUNT_SID` and `TWILIO_AUTH_TOKEN`
