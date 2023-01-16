@@ -1,37 +1,16 @@
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator, \
-    validate_slug, EmailValidator, RegexValidator
+    validate_slug
 from django.forms.widgets import Input
 from django.utils import timezone
 
-from .validators import validate_phone_number
+from .utils import split_csv_list
+from .validators import validate_phone_number, validate_email_list, \
+        validate_pin_digits_list
 
 
 twilio_default_transfer = 'Transferring, please wait.'
 twilio_default_voice = 'woman'
-
-
-def split_csv_list(value):
-    return map(str.strip, value.split(','))
-
-
-def validate_email_list(value):
-    if value is None:
-        return
-    for i, email in enumerate(split_csv_list(value)):
-        validate = EmailValidator(
-                message='Enter a valid email (for index ' + str(i) + ')')
-        validate(email)
-
-
-def validate_pin_digits_list(value):
-    if value is None:
-        return
-    for i, digits in enumerate(split_csv_list(value)):
-        validate = RegexValidator("^[0-9]{3,10}$",
-                message='Enter a valid pin, 3-10 digits (for index ' +
-                        str(i) + ')')
-        validate(digits)
 
 
 class TelInput(Input):
