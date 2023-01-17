@@ -4,9 +4,9 @@ from django.core.validators import MaxValueValidator, MinValueValidator, \
 from django.forms.widgets import Input
 from django.utils import timezone
 
-from .utils import split_csv_list
+from .utils import split_list_or_empty
 from .validators import validate_phone_number, validate_email_list, \
-        validate_pin_digits_list
+        validate_phone_list, validate_pin_digits_list
 
 
 twilio_default_transfer = 'Transferring, please wait.'
@@ -80,10 +80,7 @@ class MailboxNumber(models.Model):
     always_send_voicemail = models.BooleanField(default=False)
 
     def get_email_list(self):
-        if self.email_list is None:
-            return None
-        else:
-            return split_csv_list(self.email_list)
+        return split_list_or_empty(self.email_list)
 
     def __str__(self):
         if self.phone is None:
@@ -151,10 +148,7 @@ class MenuItem(models.Model):
             max_length=100, blank=True, null=True)
 
     def get_pin_digits_list(self):
-        if self.pin_digits_list is None:
-            return None
-        else:
-            return split_csv_list(self.pin_digits_list)
+        return split_list_or_empty(self.pin_digits_list)
 
     def __str__(self):
         return "{}-{}".format(self.menu, self.menu_digit)
@@ -204,6 +198,22 @@ class TwilioNumber(models.Model):
     name = models.CharField(max_length=40, blank=False, null=False,
                              unique=True)
     phone = PhoneField(blank=False, null=False, unique=True)
+    forward_phone_list = models.TextField(
+            help_text='A comma separated list of phone numbers which receive ' +
+                'sms forward notifications.',
+            blank=True, null=True,
+            validators=[validate_phone_list])
+    forward_email_list = models.TextField(
+            help_text='A comma separated list of emails which receive ' +
+                'sms forward notifications.',
+            blank=True, null=True,
+            validators=[validate_email_list])
+
+    def get_forward_email_list(self):
+        return split_list_or_empty(self.forward_email_list)
+
+    def get_forward_phone_list(self):
+        return split_list_or_empty(self.forward_phone_list)
 
     def __str__(self):
         return "{} {}".format(self.name, self.phone)

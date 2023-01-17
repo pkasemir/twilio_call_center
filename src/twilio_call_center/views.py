@@ -33,11 +33,13 @@ except Exception as e:
         return twilio_disabled
 
 from twilio.twiml.voice_response import VoiceResponse
+from twilio.twiml.messaging_response import MessagingResponse
 
 from .apps import scheduler, my_app
 from .forms import SendSmsForm
 from .models import Menu, MenuItem, Voicemail, twilio_default_transfer, \
-    twilio_default_voice, SmsMessage
+    twilio_default_voice, SmsMessage, TwilioNumber
+from .utils import phone_numbers_equal
 
 
 logger = logging.getLogger(__name__)
@@ -176,7 +178,7 @@ def call_action(request, name, digit=None):
         item = digit_items.first()
 
         pin_digits_list = item.get_pin_digits_list()
-        if pin_digits_list is not None:
+        if len(pin_digits_list):
             if pin is None:
                 with response.gather(
                     finish_on_key='#', action=pin_reverse(name, digit),
@@ -264,7 +266,7 @@ def send_voicemail_notifications(voicemail):
     if mailbox is None:
         return
     email_list = mailbox.get_email_list()
-    if email_list is None:
+    if len(email_list) == 0:
         return
 
     html = '''Hello,<br>
@@ -402,9 +404,8 @@ def sms_to_email(query_dict, html):
     return msg
 
 
-def sms_forward(current_site, to_number, query_dict):
+def sms_forward(current_site, twilio_phone, to_number, query_dict):
     callback_site = twilio_callback_site(current_site)
-    from_number = query_dict.get('To', Facility.objects.first().facility_phone)
 
     msg = ''
     msg += '{} received a message from {}:\n'.format(
@@ -413,8 +414,8 @@ def sms_forward(current_site, to_number, query_dict):
     kwargs = {
         'body': msg,
         'to': to_number,
-        'from_': from_number,
-        'status_callback': callback_site + reverse('www:sms-forward-cb'),
+        'from_': twilio_phone.phone,
+        'status_callback': callback_site + reverse('twilio_call_center:sms-forward-cb'),
     }
     try:
         num_media = int(query_dict.get('NumMedia', '0'))
@@ -445,13 +446,26 @@ def sms_forward_cb(request):
 @twilio_view
 def sms_incoming(request):
     query_dict = get_query_dict(request)
-    active_staff = Tenant.objects.filter(is_staff=True,
-                                         is_active=True)
     current_site = get_current_site(request)
+    twilio_phone = None
+    to_number = query_dict.get('To', None)
+    if to_number is None:
+        logger.error("Twilio API call has no 'To' field: " + str(query_dict))
+        return MessagingResponse()
+
+    for phone in TwilioNumber.objects.all():
+        if phone_numbers_equal(phone.phone, to_number):
+            twilio_phone = phone
+            break
+
+    if twilio_phone is None:
+        logger.error(
+            "Couldn't find matching TwilioNumber for incoming SMS. To: " +
+            to_number)
+        return MessagingResponse()
 
     update_sms_message("Incoming SMS", query_dict)
-    email_to = [tenant.email for tenant in
-                active_staff.filter(subscribe_sms_email=True)]
+    email_to = twilio_phone.get_forward_email_list()
     if len(email_to):
         try:
             send_mail('SMS to {} from {}'.
@@ -465,10 +479,10 @@ def sms_incoming(request):
         except Exception as e:
             logger.error('Unable to send SMS email to {}'.format(email_to))
             logger.error(str(e))
-    for staff in active_staff.filter(subscribe_sms_phone=True):
-        to_number = staff.phone_number
+    sms_to = twilio_phone.get_forward_phone_list()
+    for to_number in sms_to:
         try:
-            sms_forward(current_site, to_number, query_dict)
+            sms_forward(current_site, twilio_phone, to_number, query_dict)
         except Exception as e:
             logger.error('Unable to forward SMS to {}'.format(to_number))
             logger.error(str(e))

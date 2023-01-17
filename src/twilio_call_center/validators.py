@@ -1,18 +1,15 @@
 import phonenumbers
 
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import EmailValidator, RegexValidator
 
-from .utils import split_csv_list
+from .utils import split_list_or_empty, parse_phone_number
 
 
 def validate_phone_number(value):
-    phone_error = ValidationError("Phone number must be valid phone number")
-    default_country = getattr(settings,
-                              'TWILIO_CALL_CENTER_DEFAULT_COUNTRY', 'US')
+    phone_error = ValidationError("Enter a valid phone number.")
     try:
-        phone_input = phonenumbers.parse(value, default_country)
+        phone_input = parse_phone_number(value)
         if not phonenumbers.is_valid_number(phone_input):
             raise phone_error
     except:
@@ -20,9 +17,7 @@ def validate_phone_number(value):
 
 
 def validate_list_using(validator, value):
-    if value is None:
-        return
-    for i, item in enumerate(split_csv_list(value)):
+    for i, item in enumerate(split_list_or_empty(value)):
         try:
             validator(item)
         except ValidationError as e:
@@ -31,6 +26,10 @@ def validate_list_using(validator, value):
 
 def validate_email_list(value):
     validate_list_using(EmailValidator(), value)
+
+
+def validate_phone_list(value):
+    validate_list_using(validate_phone_number, value)
 
 
 def validate_pin_digits_list(value):
