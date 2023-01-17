@@ -174,7 +174,7 @@ class Voicemail(models.Model):
             max_length=256)
     status = models.CharField(max_length=32)
     transcription_status = models.CharField(
-            max_length=32, blank=True, null=True)
+            max_length=32, blank=True)
     last_activity = models.DateTimeField()
 
     def __str__(self):
@@ -194,8 +194,7 @@ class SmsMessage(models.Model):
 
 
 class TwilioNumber(models.Model):
-    name = models.CharField(max_length=40, blank=False, null=False,
-                             unique=True)
+    name = models.CharField(max_length=40, unique=True)
     phone = PhoneField(unique=True)
     forward_phone_list = models.TextField(
             help_text='A comma separated list of phone numbers which receive ' +

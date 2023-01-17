@@ -278,7 +278,7 @@ Recording is at {url}'''.format(menu_item=voicemail.menu_item,
                                 from_phone=voicemail.from_phone,
                                 url=voicemail.url)
 
-    if voicemail.transcription_status is not None:
+    if voicemail.transcription_status:
         html += '''<br>
 <br>
 Transcription {}'''.format(voicemail.transcription_status)
