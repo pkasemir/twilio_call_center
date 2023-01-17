@@ -344,7 +344,7 @@ def voicemail(request, name, digit):
     return response
 
 
-def sms_to_email(query_dict, html):
+def sms_to_email(query_dict, twilio_phone, html):
     if html:
         def html_wrap(pre, value="", post=""):
             return pre + value + post
@@ -398,7 +398,7 @@ def sms_to_email(query_dict, html):
     msg += html_wrap('<p>',
                      '\nFrom: {} '.format(query_dict.get('From', 'unknown')))
     msg += html_wrap('<br />',
-                     '\nTo: {} '.format(query_dict.get('To', 'unknown')),
+                     '\nTo: {} '.format(twilio_phone),
                      '</p>')
     msg += html_wrap('</body></html>')
     return msg
@@ -408,8 +408,8 @@ def sms_forward(current_site, twilio_phone, to_number, query_dict):
     callback_site = twilio_callback_site(current_site)
 
     msg = ''
-    msg += '{} received a message from {}:\n'.format(
-        current_site, query_dict.get('From', 'unknown'))
+    msg += '{}:{} received a message from {}:\n'.format(
+        current_site, twilio_phone, query_dict.get('From', 'unknown'))
     msg += query_dict.get('Body', '')
     kwargs = {
         'body': msg,
@@ -471,10 +471,10 @@ def sms_incoming(request):
             send_mail('SMS to {} from {}'.
                             format(current_site,
                                    query_dict.get('From', 'unknown')),
-                      sms_to_email(query_dict, False),
+                      sms_to_email(query_dict, twilio_phone, False),
                       'sms@aaafford.com',
                       email_to,
-                      html_message=sms_to_email(query_dict, True),
+                      html_message=sms_to_email(query_dict, twilio_phone, True),
                       )
         except Exception as e:
             logger.error('Unable to send SMS email to {}'.format(email_to))
