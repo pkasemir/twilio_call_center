@@ -66,7 +66,7 @@ class MailboxNumber(models.Model):
     email_list = models.TextField(
             help_text='A comma separated list of emails which receive ' +
                 'voicemail notifications.',
-            blank=True, null=True,
+            blank=True,
             validators=[validate_email_list])
     available_start = models.TimeField(
             help_text='If time is before this, record a voicemail. ' +
@@ -168,7 +168,7 @@ class Voicemail(models.Model):
     to_phone = PhoneField()
     transcription = models.TextField(
             help_text='A transcription of the recorded message',
-            blank=True, null=True)
+            blank=True)
     url = models.CharField(
             help_text='The url to the recording',
             max_length=256)
@@ -200,12 +200,12 @@ class TwilioNumber(models.Model):
     forward_phone_list = models.TextField(
             help_text='A comma separated list of phone numbers which receive ' +
                 'sms forward notifications.',
-            blank=True, null=True,
+            blank=True,
             validators=[validate_phone_list])
     forward_email_list = models.TextField(
             help_text='A comma separated list of emails which receive ' +
                 'sms forward notifications.',
-            blank=True, null=True,
+            blank=True,
             validators=[validate_email_list])
 
     def get_forward_email_list(self):

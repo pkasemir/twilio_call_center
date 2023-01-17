@@ -8,7 +8,9 @@ def split_csv_list(csv_list):
 
 
 def split_list_or_empty(csv_list):
-    if len(csv_list) == 0:
+    # CharFields should properly give None when null=True, but TextFields
+    # will give '' string, so we catch both cases here
+    if csv_list is None or len(csv_list) == 0:
         return []
     else:
         return split_csv_list(csv_list)
