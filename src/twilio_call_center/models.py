@@ -47,7 +47,7 @@ class Menu(models.Model):
             max_length=40, unique=True)
     greeting_text = models.CharField(
             help_text='The text to say when entering this menu.',
-            max_length=400, blank=True, null=True)
+            max_length=400, blank=True)
     voice = models.ForeignKey(Voice, on_delete=models.SET_NULL,
             help_text='Twilio voice, if unset default to "' +
                 twilio_default_voice + '".',

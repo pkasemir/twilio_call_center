@@ -129,7 +129,7 @@ def call_menu(request, name):
     ) as g:
         last_digit = -1
         menu_text = ""
-        if menu.greeting_text is not None:
+        if menu.greeting_text:
             menu_text += menu.greeting_text + '.'
         for item in items:
             # skip empty items
