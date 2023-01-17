@@ -57,6 +57,30 @@ class Menu(models.Model):
         return self.name
 
 
+class TwilioNumber(models.Model):
+    name = models.CharField(max_length=40, unique=True)
+    phone = PhoneField(unique=True)
+    forward_phone_list = models.TextField(
+            help_text='A comma separated list of phone numbers which receive ' +
+                'sms forward notifications.',
+            blank=True,
+            validators=[validate_phone_list])
+    forward_email_list = models.TextField(
+            help_text='A comma separated list of emails which receive ' +
+                'sms forward notifications.',
+            blank=True,
+            validators=[validate_email_list])
+
+    def get_forward_email_list(self):
+        return split_list_or_empty(self.forward_email_list)
+
+    def get_forward_phone_list(self):
+        return split_list_or_empty(self.forward_phone_list)
+
+    def __str__(self):
+        return "{} {}".format(self.name, self.phone)
+
+
 class MailboxNumber(models.Model):
     name = models.CharField(max_length=40)
     phone = PhoneField(
@@ -191,27 +215,3 @@ class SmsMessage(models.Model):
 
     def __str__(self):
         return self.sid
-
-
-class TwilioNumber(models.Model):
-    name = models.CharField(max_length=40, unique=True)
-    phone = PhoneField(unique=True)
-    forward_phone_list = models.TextField(
-            help_text='A comma separated list of phone numbers which receive ' +
-                'sms forward notifications.',
-            blank=True,
-            validators=[validate_phone_list])
-    forward_email_list = models.TextField(
-            help_text='A comma separated list of emails which receive ' +
-                'sms forward notifications.',
-            blank=True,
-            validators=[validate_email_list])
-
-    def get_forward_email_list(self):
-        return split_list_or_empty(self.forward_email_list)
-
-    def get_forward_phone_list(self):
-        return split_list_or_empty(self.forward_phone_list)
-
-    def __str__(self):
-        return "{} {}".format(self.name, self.phone)
