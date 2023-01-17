@@ -453,6 +453,8 @@ def sms_incoming(request):
         logger.error("Twilio API call has no 'To' field: " + str(query_dict))
         return MessagingResponse()
 
+    update_sms_message("Incoming SMS", query_dict)
+
     for phone in TwilioNumber.objects.all():
         if phone_numbers_equal(phone.phone, to_number):
             twilio_phone = phone
@@ -464,7 +466,6 @@ def sms_incoming(request):
             to_number)
         return MessagingResponse()
 
-    update_sms_message("Incoming SMS", query_dict)
     email_to = twilio_phone.get_forward_email_list()
     if len(email_to):
         try:
