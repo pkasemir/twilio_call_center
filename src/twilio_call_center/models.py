@@ -20,7 +20,7 @@ class TelInput(Input):
 class PhoneField(models.CharField):
     default_validators = [validate_phone_number]
     def __init__(self, **kwargs):
-        defaults = dict(max_length=20, blank=True, null=True)
+        defaults = dict(max_length=20)
         defaults.update(kwargs)
         super().__init__(**defaults)
 
@@ -183,8 +183,8 @@ class Voicemail(models.Model):
 
 class SmsMessage(models.Model):
     sid = models.CharField(max_length=40, unique=True)
-    from_phone = PhoneField(blank=False, null=False)
-    to_phone = PhoneField(blank=False, null=False)
+    from_phone = PhoneField()
+    to_phone = PhoneField()
     message = models.TextField()
     status = models.CharField(max_length=32)
     last_activity = models.DateTimeField()
@@ -196,7 +196,7 @@ class SmsMessage(models.Model):
 class TwilioNumber(models.Model):
     name = models.CharField(max_length=40, blank=False, null=False,
                              unique=True)
-    phone = PhoneField(blank=False, null=False, unique=True)
+    phone = PhoneField(unique=True)
     forward_phone_list = models.TextField(
             help_text='A comma separated list of phone numbers which receive ' +
                 'sms forward notifications.',
