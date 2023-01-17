@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator, \
     validate_slug
 from django.forms.widgets import Input
@@ -87,6 +88,14 @@ class MailboxNumber(models.Model):
             help_text='Phone number to connect to. If left blank, always ' +
                 'send to voicemail.',
             blank=True)
+    notification_phone = models.ForeignKey(TwilioNumber, on_delete=models.SET_NULL,
+            help_text='Use this phone number to send the sms notifications.',
+            blank=True, null=True)
+    phone_list = models.TextField(
+            help_text='A comma separated list of phone numbers which receive ' +
+                'voicemail notifications via sms.',
+            blank=True,
+            validators=[validate_phone_list])
     email_list = models.TextField(
             help_text='A comma separated list of emails which receive ' +
                 'voicemail notifications.',
@@ -104,6 +113,19 @@ class MailboxNumber(models.Model):
 
     def get_email_list(self):
         return split_list_or_empty(self.email_list)
+
+    def get_phone_list(self):
+        return split_list_or_empty(self.phone_list)
+
+    def clean(self):
+        has_notif_phone = self.notification_phone is not None
+        has_phone_list = len(self.get_phone_list()) != 0
+        if has_phone_list and not has_notif_phone:
+            error = 'Notification phone is required when Phone list is used.'
+            raise ValidationError({
+                'notification_phone': error,
+                'phone_list': error,
+                })
 
     def __str__(self):
         if not self.phone:

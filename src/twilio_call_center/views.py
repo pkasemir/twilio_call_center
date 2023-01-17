@@ -99,6 +99,10 @@ def voicemail_reverse(name, digit):
     return reverse("twilio_call_center:voicemail", kwargs={"name":name,
                                                            "digit":digit})
 
+def voicemail_sms_reverse(name, digit):
+    return reverse("twilio_call_center:voicemail-sms-cb", kwargs={"name":name,
+                                                                  "digit":digit})
+
 def get_menu(name):
     menu = Menu.objects.filter(enabled=True, name=name)
     if len(menu) == 0:
@@ -256,17 +260,18 @@ def call_end(request, name):
     return response
 
 
-def voicemail_notification_job(recording_sid):
+def voicemail_notification_job(recording_sid, current_site):
     voicemail = Voicemail.objects.get(sid=recording_sid)
-    send_voicemail_notifications(voicemail)
+    send_voicemail_notifications(voicemail, current_site)
 
 
-def send_voicemail_notifications(voicemail):
+def send_voicemail_notifications(voicemail, current_site):
     mailbox = voicemail.mailbox
     if mailbox is None:
         return
     email_list = mailbox.get_email_list()
-    if len(email_list) == 0:
+    phone_list = mailbox.get_phone_list()
+    if len(email_list) == 0 and len(phone_list) == 0:
         return
 
     html = '''Hello,<br>
@@ -287,17 +292,56 @@ Transcription {}'''.format(voicemail.transcription_status)
 '''
             html += voicemail.transcription
 
-    send_mail('Received {} voicemail from {}'.format(voicemail.menu_item,
-                                                     voicemail.from_phone),
-              strip_tags(html),
-              settings.TWILIO_CALL_CENTER_VOICEMAIL_EMAIL,
-              email_list,
-              html_message=html)
+    text_message = strip_tags(html)
+    if len(email_list):
+        send_mail('Received {} voicemail from {}'.format(voicemail.menu_item,
+                                                         voicemail.from_phone),
+                  text_message,
+                  settings.TWILIO_CALL_CENTER_VOICEMAIL_EMAIL,
+                  email_list,
+                  html_message=html)
+
+    if len(phone_list):
+        callback_site = twilio_callback_site(current_site)
+        name = digit = 'unknown'
+        menu_item = voicemail.menu_item
+        if menu_item:
+            digit = menu_item.menu_digit
+            menu = menu_item.menu
+            if menu:
+                name = menu.name
+        for to_number in phone_list:
+            kwargs = {
+                'body': text_message,
+                'to': to_number,
+                'from_': mailbox.notification_phone.phone,
+                'status_callback': callback_site + voicemail_sms_reverse(name,
+                                                                         digit),
+            }
+
+            twilio_client.messages.create(**kwargs)
+
+
+def do_nothing_with_sms_cb(request, cb_type):
+    query_dict = get_query_dict(request)
+    no_status = 'no status'
+    status = query_dict.get('MessageStatus', no_status)
+    if status in ['failed', 'undelivered', no_status]:
+        logger.error("{} failed with status: {}".format(cb_type, status))
+    return HttpResponse(status=204)
+
+
+@twilio_view
+def voicemail_sms_cb(request, name, digit):
+    cb_type = "Voicemail notification SMS for {} digit {}".format(
+            name, digit)
+    return do_nothing_with_sms_cb(request, cb_type)
 
 
 @twilio_view
 def voicemail(request, name, digit):
     query_dict = get_query_dict(request)
+    current_site = get_current_site(request)
     recording_sid = query_dict['RecordingSid']
     transcription = query_dict.get('TranscriptionText', None)
     transcription_status = query_dict.get('TranscriptionStatus', None)
@@ -330,13 +374,13 @@ def voicemail(request, name, digit):
     if transcription_status is None:
         scheduler.add_job(voicemail_notification_job, 'date',
                           run_date=timezone.now() + timedelta(minutes=5),
-                          args=[recording_sid], id=job_id)
+                          args=[recording_sid, current_site], id=job_id)
     else:
         try:
             scheduler.remove_job(job_id)
         except JobLookupError:
             pass
-        send_voicemail_notifications(voicemail)
+        send_voicemail_notifications(voicemail, current_site)
 
     response = VoiceResponse()
     twilio_say(menu, response, 'Thanks for the voicemail. Goodbye.')
@@ -435,12 +479,7 @@ def sms_forward(current_site, twilio_phone, to_number, query_dict):
 
 @twilio_view
 def sms_forward_cb(request):
-    query_dict = get_query_dict(request)
-    no_status = 'no status'
-    status = query_dict.get('MessageStatus', no_status)
-    if status in ['failed', 'undelivered', no_status]:
-        logger.error("Forward SMS failed with status: " + status)
-    return HttpResponse(status=204)
+    return do_nothing_with_sms_cb(request, "Forward SMS")
 
 
 @twilio_view

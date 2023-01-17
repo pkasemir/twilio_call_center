@@ -14,4 +14,6 @@ urlpatterns = [
     path('<slug:name>/call-pin/<slug:digit>', views.call_action, name='call-pin'),
     path('<slug:name>/call-end', views.call_end, name='call-end'),
     path('<slug:name>/voicemail/<slug:digit>', views.voicemail, name='voicemail'),
+    path('<slug:name>/voicemail-sms-cb/<slug:digit>', views.voicemail_sms_cb,
+         name='voicemail-sms-cb'),
 ]
