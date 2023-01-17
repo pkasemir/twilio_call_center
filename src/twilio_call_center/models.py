@@ -115,21 +115,21 @@ class MenuItem(models.Model):
             help_text='The text to say in the twilio menu. ' +
                 'Will be prefixed with "Press N ". ' +
                 'If left blank, it will be a hidden menu.',
-            max_length=200, blank=True, null=True)
+            max_length=200, blank=True)
     pin_digits_list = models.CharField(
             help_text='If specified, caller will have to enter one of the pins ' +
                 'in this comma separated list before any actions are taken.',
-            max_length=200, blank=True, null=True,
+            max_length=200, blank=True,
             validators = [validate_pin_digits_list])
     pin_text = models.CharField(
             help_text='If specified, say this when asking for a pin. Does ' +
                 'nothing when Pin digits list is not specified.',
-            max_length=200, blank=True, null=True)
+            max_length=200, blank=True)
     action_text = models.CharField(
             help_text='The text to say when selected by twilio menu. If action ' +
                 'mailbox phone is specified and this is blank, will use ' +
                 '"' + twilio_default_transfer + '".',
-            max_length=400, blank=True, null=True)
+            max_length=400, blank=True)
     action_mailbox = models.ForeignKey(
             MailboxNumber, on_delete=models.SET_NULL,
             help_text='If specified, will transfer to this number or mailbox',
@@ -140,11 +140,11 @@ class MenuItem(models.Model):
             blank=True, null=True)
     action_url = models.CharField(
             help_text='If specified, will send twilio to this url.',
-            max_length=400, blank=True, null=True)
+            max_length=400, blank=True)
     action_function = models.CharField(
             help_text='If specified, will call the given function and say ' +
                 'the result.',
-            max_length=100, blank=True, null=True)
+            max_length=100, blank=True)
 
     def get_pin_digits_list(self):
         return split_list_or_empty(self.pin_digits_list)

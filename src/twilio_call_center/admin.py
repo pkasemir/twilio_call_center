@@ -29,8 +29,12 @@ def clean_mutually_exclusive(form, cleaned_data, fields, error):
     mutual_errors = []
 
     for field in fields:
-        if cleaned_data[field] is not None:
-            mutual_errors.append(field)
+        if cleaned_data[field] is None:
+            continue
+        if isinstance(cleaned_data[field], str) and \
+                len(cleaned_data[field]) == 0:
+            continue
+        mutual_errors.append(field)
 
     if len(mutual_errors) > 1:
         for field in mutual_errors:
@@ -131,8 +135,6 @@ class MenuItemAdminForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        if cleaned_data['action_function'] == '':
-            cleaned_data['action_function'] = None
         clean_mutually_exclusive(
                 self, cleaned_data,
                 ['action_mailbox', 'action_submenu', 'action_url',
