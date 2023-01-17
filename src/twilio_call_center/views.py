@@ -87,21 +87,23 @@ def get_query_dict(request):
     return {}
 
 
-def call_reverse(name, page):
-    return reverse("twilio_call_center:" + page, kwargs={"name":name})
+def call_reverse(name, page, **kwargs):
+    reverse_args = {"name":name}
+    reverse_args.update(kwargs)
+    return reverse("twilio_call_center:" + page, kwargs=reverse_args)
 
 
 def pin_reverse(name, digit):
-    return reverse("twilio_call_center:call-pin", kwargs={"name":name,
-                                                          "digit":digit})
+    return call_reverse(name, 'call-pin', digit=digit)
+
 
 def voicemail_reverse(name, digit):
-    return reverse("twilio_call_center:voicemail", kwargs={"name":name,
-                                                           "digit":digit})
+    return call_reverse(name, 'voicemail', digit=digit)
+
 
 def voicemail_sms_reverse(name, digit):
-    return reverse("twilio_call_center:voicemail-sms-cb", kwargs={"name":name,
-                                                                  "digit":digit})
+    return call_reverse(name, 'voicemail-sms-cb', digit=digit)
+
 
 def get_menu(name):
     menu = Menu.objects.filter(enabled=True, name=name)
