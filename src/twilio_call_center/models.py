@@ -59,8 +59,7 @@ class Menu(models.Model):
 
 class MailboxNumber(models.Model):
     name = models.CharField(max_length=40)
-    phone = models.CharField(
-            max_length=20,
+    phone = PhoneField(
             help_text='Phone number to connect to. If left blank, always ' +
                 'send to voicemail.',
             blank=True, null=True)
@@ -165,8 +164,8 @@ class Voicemail(models.Model):
             MailboxNumber, on_delete=models.SET_NULL,
             help_text='The specific mailbox the message was sent to',
             blank=True, null=True)
-    from_phone = models.CharField(max_length=20, blank=False, null=False)
-    to_phone = models.CharField(max_length=20, blank=False, null=False)
+    from_phone = PhoneField()
+    to_phone = PhoneField()
     transcription = models.TextField(
             help_text='A transcription of the recorded message',
             blank=True, null=True)
