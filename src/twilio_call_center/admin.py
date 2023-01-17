@@ -6,6 +6,7 @@ from django.utils.html import format_html
 from .apps import my_app
 from .models import Menu, MenuItem, Voice, Voicemail, MailboxNumber, \
         SmsMessage, TwilioNumber
+from .utils import parse_phone_number
 from .views import call_reverse, get_query_dict
 
 
@@ -168,11 +169,37 @@ class MenuItemAdmin(admin.ModelAdmin):
         return list_display
 
 
+class TwilioNumberListFilter(admin.SimpleListFilter):
+    title = 'Twilio number'
+    parameter_name = 'twilio_number'
+
+    def lookups(self, request, model_admin):
+        numbers = TwilioNumber.objects.all().order_by('name')
+        return [(str(n.pk), str(n)) for n in numbers]
+
+    def queryset(self, request, queryset):
+        if self.value() is None:
+            return
+        number = TwilioNumber.objects.filter(pk=int(self.value())).first()
+        if number is None:
+            return
+        phone_number = parse_phone_number(number.phone)
+
+        matching_pks = []
+        for n in queryset:
+            if phone_number == parse_phone_number(n.to_phone) or \
+                    phone_number == parse_phone_number(n.from_phone):
+                matching_pks.append(n.pk)
+
+        return queryset.filter(pk__in=matching_pks)
+
+
 class SmsMessageAdmin(admin.ModelAdmin):
     list_display = ['sid', 'from_phone', 'to_phone', 'status', 'last_activity',
                     'message']
     search_fields = list_display
     list_display_links = list_display
+    list_filter = [TwilioNumberListFilter]
 
     def has_change_permission(self, request, obj=None):
         return False
