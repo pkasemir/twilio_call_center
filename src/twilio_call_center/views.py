@@ -208,7 +208,7 @@ def call_action(request, name, digit=None):
                 action_voicemail=voicemail_reverse(name, digit)
             else:
                 action_phone = mailbox.phone
-                if action_phone is not None and action_text is None:
+                if action_phone and action_text is None:
                     action_text = twilio_default_transfer
         if item.action_url:
             action_url = item.action_url

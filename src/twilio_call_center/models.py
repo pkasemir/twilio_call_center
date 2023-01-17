@@ -62,7 +62,7 @@ class MailboxNumber(models.Model):
     phone = PhoneField(
             help_text='Phone number to connect to. If left blank, always ' +
                 'send to voicemail.',
-            blank=True, null=True)
+            blank=True)
     email_list = models.TextField(
             help_text='A comma separated list of emails which receive ' +
                 'voicemail notifications.',
@@ -82,7 +82,7 @@ class MailboxNumber(models.Model):
         return split_list_or_empty(self.email_list)
 
     def __str__(self):
-        if self.phone is None:
+        if not self.phone:
             return self.name
         else:
             return "{}-{}".format(self.name, self.phone)
@@ -90,7 +90,7 @@ class MailboxNumber(models.Model):
     def should_send_voicemail(self):
         if self.always_send_voicemail:
             return True
-        if self.phone is None:
+        if not self.phone:
             return True
         return self.number_currently_unavailable()
 
