@@ -545,12 +545,8 @@ def update_sms_message(type_str, query_dict):
                           message=query_dict.get('Body', 'unknown'),
                           status=query_dict.get('SmsStatus', 'unknown'),
                           last_activity=timezone.now())
-        msg, created = SmsMessage.objects.get_or_create(sid=sid,
-                                                        defaults=msg_kwargs)
-        if not created:
-            for key, value in msg_kwargs.items():
-                setattr(msg, key, value)
-            msg.save()
+        msg, _ = SmsMessage.objects.update_or_create(sid=sid,
+                                                     defaults=msg_kwargs)
         return msg
 
 
