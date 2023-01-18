@@ -2,7 +2,8 @@
 A django app which allows user to create dynamic call center for use with Twilio.
 
 ## How to install into django webserver
-1. Add `twilio_call_center.apps.TwilioCallCenterConfig` to settings.py `INSTALLED_APPS`
+1. Add `twilio_call_center.apps.TwilioCallCenterConfig` and
+`django.contrib.sites` to settings.py `INSTALLED_APPS`
 2. Add a path to gain access to urls.py, for example:
 ```python
     urlpatterns = [
@@ -70,6 +71,8 @@ In the admin page there exists several types of objects:
 1. Twilio numbers - the phone numbers you will send SMS messages from or
 forward incoming messages
 2. Add `twilio_call_center` permissions to the users who can send SMS messages
+3. Set the `Sites` domain. Twilio SMS callbacks need a full url and this is
+created using the `'django.contrib.sites'` app.
 
 ### Other objects
 1. Voicemails - a recorded voicemail message with the transcription
