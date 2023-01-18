@@ -324,7 +324,7 @@ Transcription {}'''.format(voicemail.transcription_status)
             twilio_client.messages.create(**kwargs)
 
 
-def do_nothing_with_sms_cb(request, cb_type):
+def handle_sms_cb_status(request, cb_type):
     query_dict = get_query_dict(request)
     no_status = 'no status'
     status = query_dict.get('MessageStatus', no_status)
@@ -337,7 +337,7 @@ def do_nothing_with_sms_cb(request, cb_type):
 def voicemail_sms_cb(request, name, digit):
     cb_type = "Voicemail notification SMS for {} digit {}".format(
             name, digit)
-    return do_nothing_with_sms_cb(request, cb_type)
+    return handle_sms_cb_status(request, cb_type)
 
 
 @twilio_view
@@ -481,7 +481,7 @@ def sms_forward(current_site, twilio_phone, to_number, query_dict):
 
 @twilio_view
 def sms_forward_cb(request):
-    return do_nothing_with_sms_cb(request, "Forward SMS")
+    return handle_sms_cb_status(request, "Forward SMS")
 
 
 @twilio_view
@@ -595,12 +595,8 @@ def send_sms(current_site, from_number, to_number, msg):
 @twilio_view
 def send_sms_cb(request):
     query_dict = get_query_dict(request)
-    no_status = 'no status'
     update_sms_message("SMS send callback", query_dict)
-    status = query_dict.get('MessageStatus', no_status)
-    if status in ['failed', 'undelivered', no_status]:
-        logger.error("Sending SMS failed with status: " + status)
-    return HttpResponse(status=204)
+    return handle_sms_cb_status(request, 'Sending SMS')
 
 
 def sms_status(request):
