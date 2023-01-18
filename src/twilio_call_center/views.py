@@ -509,12 +509,15 @@ def sms_incoming(request):
 
     email_to = twilio_phone.get_forward_email_list()
     if len(email_to):
+        # We need settings.TWILIO_CALL_CENTER_SMS_EMAIL, so make sure it
+        # exists, else raise an exception which will email admins
+        _ = settings.TWILIO_CALL_CENTER_SMS_EMAIL
         try:
             send_mail('SMS to {} from {}'.
                             format(current_site,
                                    query_dict.get('From', 'unknown')),
                       sms_to_email(query_dict, twilio_phone, False),
-                      'sms@aaafford.com',
+                      settings.TWILIO_CALL_CENTER_SMS_EMAIL,
                       email_to,
                       html_message=sms_to_email(query_dict, twilio_phone, True),
                       )

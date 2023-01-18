@@ -10,10 +10,12 @@ A django app which allows user to create dynamic call center for use with Twilio
         path('call-center/', include('twilio_call_center.urls'),
             name='twilio_call_center'),
 ```
-3. Add `TWILIO_CALL_CENTER_VOICEMAIL_EMAIL` to settings.py
+3. Add emails to settings.py
 ```python
 TWILIO_CALL_CENTER_VOICEMAIL_EMAIL=os.environ.get(
         'TWILIO_CALL_CENTER_VOICEMAIL_EMAIL', 'voicemail@your-domain.com')
+TWILIO_CALL_CENTER_SMS_EMAIL=os.environ.get(
+        'TWILIO_CALL_CENTER_SMS_EMAIL', 'sms@your-domain.com')
 ```
 
 ## Other settings
