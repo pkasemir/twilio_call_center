@@ -218,6 +218,7 @@ class Voicemail(models.Model):
     url = models.CharField(
             help_text='The url to the recording',
             max_length=256)
+    removed_from_twilio = models.BooleanField(default=False)
     status = models.CharField(max_length=32)
     transcription_status = models.CharField(
             max_length=32, blank=True)

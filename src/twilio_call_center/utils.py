@@ -2,6 +2,22 @@ import phonenumbers
 
 from django.conf import settings
 
+try:
+    from django_twilio.client import twilio_client
+    from django_twilio.decorators import twilio_view
+except Exception as e:
+    print(e)
+    print("WARNING: Could not start twilio, it's functions will be disabled")
+
+    def twilio_view(fn):
+        def twilio_disabled(req):
+            resp = 'Cannot open {}. Twilio is disabled'.format(fn.__name__)
+            if settings.DEBUG:
+                resp += '<br><br>Here is the response<br>'
+                resp += '<textarea rows="20" cols="120">{}</textarea>'.format(fn(req))
+            return HttpResponse(resp)
+        return twilio_disabled
+
 
 def split_csv_list(csv_list):
     return list(map(str.strip, csv_list.split(',')))

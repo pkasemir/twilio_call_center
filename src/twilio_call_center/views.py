@@ -16,30 +16,16 @@ from django.utils.safestring import SafeText
 from django.views.generic.edit import FormView
 
 
-try:
-    from django_twilio.client import twilio_client
-    from django_twilio.decorators import twilio_view
-except Exception as e:
-    print(e)
-    print("WARNING: Could not start twilio, it's functions will be disabled")
-
-    def twilio_view(fn):
-        def twilio_disabled(req):
-            resp = 'Cannot open {}. Twilio is disabled'.format(fn.__name__)
-            if settings.DEBUG:
-                resp += '<br><br>Here is the response<br>'
-                resp += '<textarea rows="20" cols="120">{}</textarea>'.format(fn(req))
-            return HttpResponse(resp)
-        return twilio_disabled
 
 from twilio.twiml.voice_response import VoiceResponse
 from twilio.twiml.messaging_response import MessagingResponse
 
-from .apps import scheduler, my_app
+from .apps import my_app
 from .forms import SendSmsForm
 from .models import Menu, MenuItem, Voicemail, twilio_default_transfer, \
     twilio_default_voice, SmsMessage, TwilioNumber
-from .utils import phone_numbers_equal
+from .schedule import scheduler
+from .utils import twilio_client, twilio_view, phone_numbers_equal
 
 
 logger = logging.getLogger(__name__)

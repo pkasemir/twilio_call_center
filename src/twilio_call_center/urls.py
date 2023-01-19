@@ -1,6 +1,7 @@
 from django.urls import path
 
 from . import views
+from .schedule import one_time_startup
 
 app_name = 'twilio_call_center'
 urlpatterns = [
@@ -17,3 +18,5 @@ urlpatterns = [
     path('<slug:name>/voicemail-sms-cb/<slug:digit>', views.voicemail_sms_cb,
          name='voicemail-sms-cb'),
 ]
+
+one_time_startup()
