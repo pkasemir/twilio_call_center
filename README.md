@@ -56,6 +56,16 @@ This setting lets you choose which country to attempt parsing phone numbers.
 It defaults to 'US', but consult `pypi` package `phonenumbers` documentation
 for the function `phonenumbers.parse()`
 
+### `TWILIO_CALL_CENTER_VOICEMAIL_LIFESPAN` (in days)
+Twilio charges a small amount of money for each minute of voicemail.
+This setting can be used to clean up old voicemails so they don't accrue charges.
+
+The default of this setting is `None`, which means voicemails are never
+deleted from twilio.
+
+Set this setting to an integer value larger than `0`. This value will be the
+**number of days** a voicemail will stay on twilios site before we delete it.
+
 ## How to use the call center
 ### Ensure Twilio credentials are set
 Preferrably as environment variables, set `TWILIO_ACCOUNT_SID` and `TWILIO_AUTH_TOKEN`
