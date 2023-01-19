@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Send SMS</title>
+    <style>
+.alert {
+  padding: 20px;
+  color: white;
+  opacity: 1;
+  transition: opacity 0.6s;
+  margin-bottom: 15px;
+  margin: 0 25px 15px;
+}
+.alert.error {background-color: #f44336;}
+.alert.warning {background-color: #ff9800;}
+.alert.info {background-color: #04AA6D;}
+.alertclose {
+  margin-left: 15px;
+  color: white;
+  font-weight: bold;
+  float: right;
+  font-size: 22px;
+  line-height: 20px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+.alertclose:hover {
+  color: black;
+}
+.errorlist {
+  color: #f44336;
+  list-style: none;
+  padding: 0 15px;
+  margin-bottom: 5px;
+}
+html, body {
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  margin: 0;
+  background: #1c87c9;
+}
+h1 {
+  margin: 0 0 20px;
+  font-weight: 400;
+  color: #1c87c9;
+}
+p {
+  margin: 0;
+}
+label {
+  margin: 0 5px 5px;
+  display: inline-block;
+}
+.main-block {
+  margin-top: 20px;
+}
+form {
+  padding: 25px;
+  margin: 25px auto 0;
+  box-shadow: 0 2px 5px #f5f5f5;
+  background: #f5f5f5;
+}
+input, textarea, select {
+  padding: 8px;
+  margin-bottom: 20px;
+  border: 1px solid #1c87c9;
+  outline: none;
+}
+input, textarea{
+  width: calc(100% - 18px);
+}
+button {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  background: #1c87c9;
+  font-size: 16px;
+  font-weight: 400;
+  color: #fff;
+}
+button:hover {
+  background: #2371a0;
+}
+.top-nav {
+  overflow: hidden;
+  background-color: #333;
+}
+
+.top-nav a {
+  float: left;
+  color: #f2f2f2;
+  text-align: center;
+  padding: 14px 16px;
+  text-decoration: none;
+  font-size: 17px;
+}
+
+.top-nav a:hover {
+  background-color: #ddd;
+  color: black;
+}
+
+@media (min-width: 625px) {
+  form {
+    width: 50%;
+  }
+}
+    </style>
+    <script>
+function alert_close(btn) {
+  var div = btn.parentElement;
+  div.style.opacity = "0";
+  setTimeout(function(){ div.style.display = "none"; }, 600);
+}
+{% if last_msg and not has_error %}
+function addMessage(level, message) {
+  var message_list = document.getElementById('message-list');
+  message_list.innerHTML +=
+    '<div class="alert ' + level + '">' +
+    '  <span class="alertclose" onclick="alert_close(this);">&times</span>' +
+    message + '</div>';
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            // Does this cookie string begin with the name we want?
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+const statusHeaders = new Headers();
+statusHeaders.append('X-CSRFToken', getCookie('csrftoken'));
+
+let lastStatus = '';
+let timeLeft = 30;
+let finished = false;
+let myTimer = setInterval(function() {
+  if (finished) {
+    return;
+  }
+  const query = new FormData();
+  query.append('sid', '{{ last_msg }}');
+  const statusOptions = {
+    method: 'POST',
+    headers: statusHeaders,
+    body: query,
+  };
+  const myRequest = new Request('{% url "twilio_call_center:sms-status" %}',
+    statusOptions);
+  fetch(myRequest).
+    then((response) => response.json()).
+    then((data) => {
+    if (data.error) {
+      addMessage("error", data.error);
+      finished = true;
+    } else {
+      if (data.status !== lastStatus) {
+        lastStatus = data.status;
+        let level = "info";
+        switch (data.status) {
+          case "failed":
+            level = "error";
+            finished = true;
+            break;
+          case "undelivered":
+            level = "warning";
+            break;
+          case "delivered":
+            finished = true;
+            break;
+        }
+        addMessage(level, "Message: " + data.status + " " + data.last_activity);
+      }
+    }
+  });
+  timeLeft--;
+  if (timeLeft <= 0 || finished) {
+    clearInterval(myTimer);
+  }
+}, 1000);
+
+{% endif %}
+    </script>
+  </head>
+  <body>
+    {% if not perms.twilio_call_center.add_smsmessage %}
+    <div class="main-block">
+      <div class="alert warning">
+        You do not have permissions to send SMS messages. Ask administrator to
+        give you 'add sms message' permissions.
+      </div>
+      <form>
+        <button onclick="history.back()">Go Back</button>
+      </form>
+    </div>
+    {% else %}
+    {% block top-nav %}
+    <div class="top-nav">
+      <a href="{% url 'admin:index' %}">Django administration</a>
+      <a href="{% url "admin:twilio_call_center_smsmessage_changelist" %}">
+        SMS Messages
+      </a>
+    </div>
+    {% endblock %}
+    <div class="main-block">
+      <div id="message-list">
+        {% for message in messages %}
+        <div class="alert {{message.tags}}">
+          <span class="alertclose" onclick="alert_close(this);">&times</span>
+          {{message}}</div>
+        {% endfor %}
+      </div>
+      <form action="" method="post"
+        onsubmit="document.getElementById('submit-button').disabled = true; return true">
+        <h1>Send an SMS message</h1>
+        {% csrf_token %}
+        {{form.as_p}}
+        <button type="submit" id='submit-button'>Send</button>
+      </form>
+    </div>
+    {% endif %}
+  </body>
+</html>

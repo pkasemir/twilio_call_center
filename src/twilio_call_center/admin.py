@@ -4,7 +4,9 @@ from django.urls import reverse
 from django.utils.html import format_html
 
 from .apps import my_app
-from .models import Menu, MenuItem, Voice, Voicemail, MailboxNumber
+from .models import Menu, MenuItem, Voice, Voicemail, MailboxNumber, \
+        SmsMessage, TwilioNumber
+from .utils import parse_phone_number
 from .views import call_reverse, get_query_dict
 
 
@@ -28,8 +30,12 @@ def clean_mutually_exclusive(form, cleaned_data, fields, error):
     mutual_errors = []
 
     for field in fields:
-        if cleaned_data[field] is not None:
-            mutual_errors.append(field)
+        if cleaned_data[field] is None:
+            continue
+        if isinstance(cleaned_data[field], str) and \
+                len(cleaned_data[field]) == 0:
+            continue
+        mutual_errors.append(field)
 
     if len(mutual_errors) > 1:
         for field in mutual_errors:
@@ -130,8 +136,6 @@ class MenuItemAdminForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        if cleaned_data['action_function'] == '':
-            cleaned_data['action_function'] = None
         clean_mutually_exclusive(
                 self, cleaned_data,
                 ['action_mailbox', 'action_submenu', 'action_url',
@@ -165,8 +169,46 @@ class MenuItemAdmin(admin.ModelAdmin):
         return list_display
 
 
+class TwilioNumberListFilter(admin.SimpleListFilter):
+    title = 'Twilio number'
+    parameter_name = 'twilio_number'
+
+    def lookups(self, request, model_admin):
+        numbers = TwilioNumber.objects.all().order_by('name')
+        return [(str(n.pk), str(n)) for n in numbers]
+
+    def queryset(self, request, queryset):
+        if self.value() is None:
+            return
+        number = TwilioNumber.objects.filter(pk=int(self.value())).first()
+        if number is None:
+            return
+        phone_number = parse_phone_number(number.phone)
+
+        matching_pks = []
+        for n in queryset:
+            if phone_number == parse_phone_number(n.to_phone) or \
+                    phone_number == parse_phone_number(n.from_phone):
+                matching_pks.append(n.pk)
+
+        return queryset.filter(pk__in=matching_pks)
+
+
+class SmsMessageAdmin(admin.ModelAdmin):
+    list_display = ['sid', 'from_phone', 'to_phone', 'status', 'last_activity',
+                    'message']
+    search_fields = list_display
+    list_display_links = list_display
+    list_filter = [TwilioNumberListFilter]
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
 admin.site.register(Voice)
 admin.site.register(MailboxNumber, MailboxNumberAdmin)
 admin.site.register(Voicemail, VoicemailAdmin)
 admin.site.register(Menu, MenuAdmin)
 admin.site.register(MenuItem, MenuItemAdmin)
+admin.site.register(SmsMessage, SmsMessageAdmin)
+admin.site.register(TwilioNumber)

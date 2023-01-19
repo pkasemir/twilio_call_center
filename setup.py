@@ -19,6 +19,7 @@ setuptools.setup(
         "apscheduler",
         "django",
         "django_twilio",
+        "phonenumbers",
         "twilio",
     ],
     classifiers=[
@@ -28,6 +29,7 @@ setuptools.setup(
         "Framework :: Django",
     ],
     package_dir={"": "src"},
+    package_data={"twilio_call_center": ["templates/*/*.html"]},
     packages=setuptools.find_packages(where="src"),
     python_requires=">=3.6",
 )
