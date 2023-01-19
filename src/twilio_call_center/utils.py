@@ -9,6 +9,8 @@ except Exception as e:
     print(e)
     print("WARNING: Could not start twilio, it's functions will be disabled")
 
+    twilio_client = None
+
     def twilio_view(fn):
         def twilio_disabled(req):
             resp = 'Cannot open {}. Twilio is disabled'.format(fn.__name__)
