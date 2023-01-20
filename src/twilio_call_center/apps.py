@@ -2,10 +2,7 @@ from importlib import import_module
 
 from django.apps import AppConfig, apps
 from django.conf import settings
-from apscheduler.schedulers.background import BackgroundScheduler
 
-scheduler = BackgroundScheduler()
-scheduler.start()
 
 class TwilioCallCenterConfig(AppConfig):
     name = 'twilio_call_center'

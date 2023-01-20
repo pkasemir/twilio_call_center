@@ -75,6 +75,8 @@ class VoicemailAdmin(admin.ModelAdmin):
         return [f for f in fields if f != 'url']
 
     def _url(self, obj):
+        if obj.removed_from_twilio:
+            return "-- deleted --"
         return format_html(
 '''
 <a href="{0}.mp3">MP3 Link</a> ---
@@ -83,6 +85,8 @@ class VoicemailAdmin(admin.ModelAdmin):
 '''.format(obj.url, self.play_voicemail(obj)))
 
     def play_voicemail(self, obj):
+        if obj.removed_from_twilio:
+            return "-- deleted --"
         return format_html(
 '''
 <audio controls>
