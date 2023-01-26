@@ -119,6 +119,7 @@ class MenuItemInfoFilter(admin.SimpleListFilter):
         return [
                 ["function", "function"],
                 ["mailbox", "mailbox"],
+                ["pin", "pin"],
                 ["submenu", "submenu"],
                 ["text", "text"],
                 ["url", "url"],
@@ -162,6 +163,8 @@ class MenuItemAdmin(admin.ModelAdmin):
             return common_info + ['action_function']
         if info == 'mailbox':
             return common_info + [link_to_object('action_mailbox', 'mailboxnumber')]
+        if info == 'pin':
+            return common_info + ['pin_text', 'pin_digits_list']
         if info == 'submenu':
             return common_info + [link_to_object('action_submenu', 'menu')]
         if info == 'text':
