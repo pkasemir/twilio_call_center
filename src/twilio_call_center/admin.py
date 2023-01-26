@@ -117,6 +117,7 @@ class MenuItemInfoFilter(admin.SimpleListFilter):
 
     def lookups(self, request, model_admin):
         return [
+                ["function", "function"],
                 ["mailbox", "mailbox"],
                 ["text", "text"],
                 ["submenu", "submenu"],
@@ -157,6 +158,8 @@ class MenuItemAdmin(admin.ModelAdmin):
         query_dict = get_query_dict(request)
         info = query_dict.get('info', None)
         common_info = ['enabled', link_to_object('menu'), 'menu_digit', 'menu_text']
+        if info == 'function':
+            return common_info + ['action_function']
         if info == 'mailbox':
             return common_info + [link_to_object('action_mailbox', 'mailboxnumber')]
         if info == 'text':
