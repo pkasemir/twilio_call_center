@@ -13,9 +13,9 @@ A django app which allows user to create dynamic call center for use with Twilio
 ```
 3. Add emails to settings.py
 ```python
-TWILIO_CALL_CENTER_VOICEMAIL_EMAIL=os.environ.get(
+TWILIO_CALL_CENTER_VOICEMAIL_EMAIL = os.environ.get(
         'TWILIO_CALL_CENTER_VOICEMAIL_EMAIL', 'voicemail@your-domain.com')
-TWILIO_CALL_CENTER_SMS_EMAIL=os.environ.get(
+TWILIO_CALL_CENTER_SMS_EMAIL = os.environ.get(
         'TWILIO_CALL_CENTER_SMS_EMAIL', 'sms@your-domain.com')
 ```
 4. (Optional) add link to the SMS sending page in one of your apps templates
@@ -48,7 +48,7 @@ will have the HTTPS protocol, but this will allow you to set HTTP protocol for
 debug purposes.
 ```python
 # local_settings.py
-TWILIO_CALL_CENTER_DEBUG_SITE="http://93.93.10.10:8000"
+TWILIO_CALL_CENTER_DEBUG_SITE = "http://93.93.10.10:8000"
 ```
 
 ### `TWILIO_CALL_CENTER_DEFAULT_COUNTRY`
